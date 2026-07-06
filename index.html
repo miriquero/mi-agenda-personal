@@ -47,6 +47,9 @@
       <button onclick="cambiarTab(0)" id="tab-0" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-calendar-day w-4 text-center"></i><span class="font-medium text-sm">Diario</span>
       </button>
+      <button onclick="cambiarTab(5)" id="tab-5" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-stopwatch w-4 text-center"></i><span class="font-medium text-sm">Pomodoro</span>
+      </button>
       <button onclick="cambiarTab(1)" id="tab-1" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-book w-4 text-center"></i><span class="font-medium text-sm">Materias</span>
       </button>
@@ -281,6 +284,81 @@
         </div>
       </div>
 
+      <!-- PANEL POMODORO -->
+      <div id="panel-5" class="hidden">
+        <div id="sin-materias-pomodoro" class="hidden glass border border-amber-700/40 rounded-3xl p-8 mb-8 text-center">
+          <p class="text-4xl mb-3">🍅</p>
+          <p class="text-zinc-300 mb-4">Cargá al menos una materia para poder usar el Pomodoro.</p>
+          <button onclick="cambiarTab(1)" class="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Ir a Materias</button>
+        </div>
+
+        <div id="pomodoro-wrap" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div class="lg:col-span-2 glass border border-zinc-700 rounded-3xl p-8 flex flex-col items-center">
+            <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Materia</label>
+                <select id="pomo-materia" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500"></select>
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">¿En qué estás trabajando?</label>
+                <input id="pomo-tema" type="text" placeholder="Guía 4 - ejercicios" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <div class="relative w-64 h-64 mb-8">
+              <svg viewBox="0 0 200 200" class="w-full h-full -rotate-90">
+                <circle cx="100" cy="100" r="90" stroke="#27272a" stroke-width="12" fill="none"/>
+                <circle id="pomo-progreso" cx="100" cy="100" r="90" stroke="#10b981" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="565.48" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear, stroke .3s;"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="pomo-tiempo" class="text-5xl font-bold mono">25:00</span>
+                <span id="pomo-fase" class="text-sm text-zinc-500 mt-2 uppercase tracking-wide">Enfoque</span>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <button id="pomo-btn-iniciar" onclick="pomodoroIniciar()" class="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-8 py-3.5 rounded-3xl font-semibold transition-all active:scale-95">Iniciar</button>
+              <button id="pomo-btn-pausar" onclick="pomodoroPausar()" class="hidden bg-zinc-800 hover:bg-zinc-700 px-8 py-3.5 rounded-3xl font-semibold transition-colors">Pausar</button>
+              <button onclick="pomodoroSaltar()" class="bg-zinc-800 hover:bg-zinc-700 px-6 py-3.5 rounded-3xl font-medium transition-colors" title="Saltar a la siguiente fase sin registrar"><i class="fas fa-forward"></i></button>
+              <button onclick="pomodoroReiniciar()" class="bg-zinc-800 hover:bg-zinc-700 px-6 py-3.5 rounded-3xl font-medium transition-colors" title="Reiniciar"><i class="fas fa-rotate-left"></i></button>
+            </div>
+
+            <div class="w-full mt-8 pt-6 border-t border-zinc-800">
+              <button onclick="document.getElementById('pomo-config').classList.toggle('hidden')" class="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"><i class="fas fa-sliders-h mr-1.5"></i>Ajustar duraciones</button>
+              <div id="pomo-config" class="hidden grid grid-cols-3 gap-4 mt-4">
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1">Enfoque (min)</label>
+                  <input id="pomo-dur-trabajo" type="number" min="1" value="25" onchange="pomodoroConfigCambio()" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1">Descanso corto</label>
+                  <input id="pomo-dur-corto" type="number" min="1" value="5" onchange="pomodoroConfigCambio()" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-500 mb-1">Descanso largo</label>
+                  <input id="pomo-dur-largo" type="number" min="1" value="15" onchange="pomodoroConfigCambio()" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass border border-zinc-700 rounded-3xl p-7">
+            <h3 class="text-lg font-semibold mb-5">Hoy</h3>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <p class="text-xs text-zinc-500 mb-1">Pomodoros</p>
+                <p id="pomo-contador-hoy" class="text-2xl font-bold">0</p>
+              </div>
+              <div>
+                <p class="text-xs text-zinc-500 mb-1">Tiempo enfocado</p>
+                <p id="pomo-tiempo-hoy" class="text-2xl font-bold">0h</p>
+              </div>
+            </div>
+            <div id="pomo-historial-hoy" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -314,6 +392,17 @@ let colorSeleccionado = 0;
 let entradaEditando = null;
 let mesActual = new Date();
 let chartSemanal = null;
+
+/* ---------- Estado del Pomodoro ---------- */
+let pomoDurTrabajo = 25;
+let pomoDurCorto = 5;
+let pomoDurLargo = 15;
+let pomoFase = 'trabajo'; // 'trabajo' | 'corto' | 'largo'
+let pomoTotalSegundosFase = pomoDurTrabajo * 60;
+let pomoSegundosRestantes = pomoTotalSegundosFase;
+let pomoInterval = null;
+let pomoCorriendo = false;
+let pomoCiclos = 0;
 
 /* ---------- Storage helpers (via Google Apps Script) ---------- */
 function apiConfigurada() {
@@ -397,13 +486,16 @@ function renderSelectMaterias() {
   const opts = materias.map(m => `<option value="${m.id}">${escapeHtml(m.nombre)}</option>`).join('');
   const selEntrada = document.getElementById('entrada-materia');
   const selExamen = document.getElementById('examen-materia');
+  const selPomo = document.getElementById('pomo-materia');
   const filtro = document.getElementById('filtro-materia-diario');
-  const prevEntrada = selEntrada.value, prevExamen = selExamen.value, prevFiltro = filtro.value;
+  const prevEntrada = selEntrada.value, prevExamen = selExamen.value, prevFiltro = filtro.value, prevPomo = selPomo.value;
   selEntrada.innerHTML = opts;
   selExamen.innerHTML = opts;
+  selPomo.innerHTML = opts;
   filtro.innerHTML = '<option value="todas">Todas las materias</option>' + opts;
   if (materias.some(m => m.id === prevEntrada)) selEntrada.value = prevEntrada;
   if (materias.some(m => m.id === prevExamen)) selExamen.value = prevExamen;
+  if (materias.some(m => m.id === prevPomo)) selPomo.value = prevPomo;
   if (prevFiltro === 'todas' || materias.some(m => m.id === prevFiltro)) filtro.value = prevFiltro;
 
   const sinMaterias = materias.length === 0;
@@ -411,6 +503,8 @@ function renderSelectMaterias() {
   document.getElementById('form-diario-wrap').classList.toggle('hidden', sinMaterias);
   document.getElementById('sin-materias-examen').classList.toggle('hidden', !sinMaterias);
   document.getElementById('form-examen-wrap').classList.toggle('hidden', sinMaterias);
+  document.getElementById('sin-materias-pomodoro').classList.toggle('hidden', !sinMaterias);
+  document.getElementById('pomodoro-wrap').classList.toggle('hidden', sinMaterias);
 }
 
 function renderMaterias() {
@@ -496,6 +590,7 @@ function renderDiario() {
         <div class="flex items-center gap-2 flex-wrap">
           <span class="${c.soft} ${c.text} px-3 py-1 rounded-full text-xs font-semibold">${m ? escapeHtml(m.nombre) : 'Sin materia'}</span>
           <span class="text-emerald-400 text-sm font-medium">${fmtFecha(entry.fecha)}</span>
+          ${entry.origen === 'pomodoro' ? `<span title="Registrado con Pomodoro">🍅</span>` : ''}
         </div>
         <div class="flex items-center gap-3">
           <span class="bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs">${entry.horas ? entry.horas + 'h' : '—'}</span>
@@ -833,16 +928,166 @@ function renderMensual() {
     }).join('');
 }
 
+/* ---------- Pomodoro ---------- */
+function duracionFaseActual() {
+  return pomoFase === 'trabajo' ? pomoDurTrabajo : pomoFase === 'corto' ? pomoDurCorto : pomoDurLargo;
+}
+function formatearMinSeg(totalSeg) {
+  const mins = Math.floor(totalSeg / 60);
+  const secs = totalSeg % 60;
+  return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+}
+function actualizarDisplayPomodoro() {
+  const texto = formatearMinSeg(pomoSegundosRestantes);
+  const nombresFase = { trabajo: 'Enfoque', corto: 'Descanso corto', largo: 'Descanso largo' };
+  const coloresFase = { trabajo: '#10b981', corto: '#3b82f6', largo: '#a855f7' };
+  document.getElementById('pomo-tiempo').textContent = texto;
+  document.getElementById('pomo-fase').textContent = nombresFase[pomoFase];
+  const circunferencia = 565.48;
+  const progreso = pomoTotalSegundosFase > 0 ? (pomoSegundosRestantes / pomoTotalSegundosFase) : 0;
+  const circulo = document.getElementById('pomo-progreso');
+  circulo.setAttribute('stroke-dashoffset', circunferencia * (1 - progreso));
+  circulo.setAttribute('stroke', coloresFase[pomoFase]);
+  document.title = pomoCorriendo ? `${texto} · ${nombresFase[pomoFase]}` : '✦ Agenda de Facultad';
+}
+function actualizarBotonesPomodoro(corriendo) {
+  document.getElementById('pomo-btn-iniciar').classList.toggle('hidden', corriendo);
+  document.getElementById('pomo-btn-pausar').classList.toggle('hidden', !corriendo);
+  document.getElementById('pomo-materia').disabled = corriendo;
+}
+function sonarBeep(tono) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const repeticiones = tono === 'largo' ? 2 : 3;
+    for (let i = 0; i < repeticiones; i++) {
+      const delay = i * 0.3;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.25);
+    }
+  } catch (e) { /* audio no disponible, seguimos sin sonido */ }
+}
+async function registrarPomodoro() {
+  const materiaId = document.getElementById('pomo-materia').value;
+  if (!materiaId) return;
+  const tema = document.getElementById('pomo-tema').value.trim();
+  entradas.unshift({
+    id: uid(),
+    fecha: hoyISO(),
+    materiaId,
+    horas: Math.round((pomoDurTrabajo / 60) * 100) / 100,
+    tema: tema || 'Sesión Pomodoro',
+    videos: '',
+    tareas: '',
+    notas: '',
+    origen: 'pomodoro',
+  });
+  await guardarColeccion('entradas', entradas);
+  renderTodo();
+}
+function pomodoroTerminarFase(natural) {
+  clearInterval(pomoInterval);
+  pomoInterval = null;
+  pomoCorriendo = false;
+  const faseQueTermina = pomoFase;
+  if (natural && faseQueTermina === 'trabajo') {
+    registrarPomodoro();
+    pomoCiclos++;
+  }
+  pomoFase = faseQueTermina === 'trabajo'
+    ? ((pomoCiclos > 0 && pomoCiclos % 4 === 0) ? 'largo' : 'corto')
+    : 'trabajo';
+  pomoTotalSegundosFase = duracionFaseActual() * 60;
+  pomoSegundosRestantes = pomoTotalSegundosFase;
+  actualizarDisplayPomodoro();
+  actualizarBotonesPomodoro(false);
+  if (natural) {
+    sonarBeep(faseQueTermina === 'trabajo' && pomoFase === 'largo' ? 'largo' : 'corto');
+    mostrarToast(faseQueTermina === 'trabajo' ? '🍅 ¡Pomodoro completado y registrado!' : '⏰ Descanso terminado, ¡a seguir!');
+  }
+}
+function pomodoroTick() {
+  pomoSegundosRestantes--;
+  if (pomoSegundosRestantes <= 0) {
+    pomodoroTerminarFase(true);
+  } else {
+    actualizarDisplayPomodoro();
+  }
+}
+function pomodoroIniciar() {
+  if (materias.length === 0 || pomoCorriendo) return;
+  pomoCorriendo = true;
+  pomoInterval = setInterval(pomodoroTick, 1000);
+  actualizarBotonesPomodoro(true);
+  actualizarDisplayPomodoro();
+}
+function pomodoroPausar() {
+  clearInterval(pomoInterval);
+  pomoInterval = null;
+  pomoCorriendo = false;
+  actualizarBotonesPomodoro(false);
+  document.title = '✦ Agenda de Facultad';
+}
+function pomodoroReiniciar() {
+  clearInterval(pomoInterval);
+  pomoInterval = null;
+  pomoCorriendo = false;
+  pomoFase = 'trabajo';
+  pomoCiclos = 0;
+  pomoTotalSegundosFase = pomoDurTrabajo * 60;
+  pomoSegundosRestantes = pomoTotalSegundosFase;
+  actualizarDisplayPomodoro();
+  actualizarBotonesPomodoro(false);
+}
+function pomodoroSaltar() {
+  pomodoroTerminarFase(false);
+}
+function pomodoroConfigCambio() {
+  pomoDurTrabajo = parseInt(document.getElementById('pomo-dur-trabajo').value) || 25;
+  pomoDurCorto = parseInt(document.getElementById('pomo-dur-corto').value) || 5;
+  pomoDurLargo = parseInt(document.getElementById('pomo-dur-largo').value) || 15;
+  if (!pomoCorriendo) {
+    pomoTotalSegundosFase = duracionFaseActual() * 60;
+    pomoSegundosRestantes = pomoTotalSegundosFase;
+    actualizarDisplayPomodoro();
+  }
+}
+function renderPomodoroHistorialHoy() {
+  const hoy = hoyISO();
+  const sesiones = entradas.filter(e => e.fecha === hoy && e.origen === 'pomodoro');
+  document.getElementById('pomo-contador-hoy').textContent = sesiones.length;
+  const horasHoy = sesiones.reduce((s,e) => s + (e.horas||0), 0);
+  document.getElementById('pomo-tiempo-hoy').textContent = `${horasHoy.toFixed(1)}h`;
+  const cont = document.getElementById('pomo-historial-hoy');
+  cont.innerHTML = sesiones.length === 0
+    ? `<p class="text-zinc-600 text-sm">Todavía no completaste ningún pomodoro hoy.</p>`
+    : sesiones.map(s => {
+      const m = materiaPorId(s.materiaId);
+      const c = colorDe(m);
+      return `<div class="flex items-center gap-3 text-sm">
+        <span class="w-2 h-2 rounded-full ${c.dot} shrink-0"></span>
+        <span class="flex-1 truncate">${m ? escapeHtml(m.nombre) : 'Sin materia'}</span>
+        <span class="text-zinc-500 shrink-0">${Math.round(s.horas*60)}min</span>
+      </div>`;
+    }).join('');
+}
+
 /* ---------- Tabs ---------- */
 function cambiarTab(n) {
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.classList.add('hidden'));
   document.getElementById(`panel-${n}`).classList.remove('hidden');
   document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('tab-active'));
   document.getElementById(`tab-${n}`).classList.add('tab-active');
-  const titulos = ['Diario de hoy', 'Mis materias', 'Exámenes y entregas', 'Resumen semanal', 'Vista mensual'];
+  const titulos = { 0:'Diario de hoy', 1:'Mis materias', 2:'Exámenes y entregas', 3:'Resumen semanal', 4:'Vista mensual', 5:'Pomodoro' };
   document.getElementById('header-title').textContent = titulos[n];
   if (n === 3) renderSemanal();
   if (n === 4) renderMensual();
+  if (n === 5) renderPomodoroHistorialHoy();
 }
 
 /* ---------- Render general ---------- */
@@ -851,9 +1096,10 @@ function renderTodo() {
   renderDiario();
   renderExamenes();
   renderStatsGlobales();
-  const panelActivo = [0,1,2,3,4].find(n => !document.getElementById(`panel-${n}`).classList.contains('hidden'));
+  const panelActivo = [0,1,2,3,4,5].find(n => !document.getElementById(`panel-${n}`).classList.contains('hidden'));
   if (panelActivo === 3) renderSemanal();
   if (panelActivo === 4) renderMensual();
+  if (panelActivo === 5) renderPomodoroHistorialHoy();
 }
 
 /* ---------- Init ---------- */
@@ -861,6 +1107,7 @@ async function init() {
   document.getElementById('fecha').value = hoyISO();
   document.getElementById('fecha-hoy').innerHTML = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
   renderColorPicker();
+  actualizarDisplayPomodoro();
 
   if (!apiConfigurada()) {
     document.getElementById('loading-overlay').innerHTML = `

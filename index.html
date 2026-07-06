@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✦ Agenda de Facultad</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); }
+  .card-hover { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+  .card-hover:hover { transform: translateY(-3px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.25); }
+  .tab-active { background: rgba(255,255,255,0.08); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  @keyframes slideIn { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform:translateY(0);} }
+  .anim-in { animation: slideIn .25s ease-out; }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; }
+</style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 min-h-screen">
+
+<div id="loading-overlay" class="fixed inset-0 bg-zinc-950 z-50 flex flex-col items-center justify-center gap-4">
+  <div class="w-10 h-10 border-2 border-zinc-700 border-t-emerald-400 rounded-full animate-spin"></div>
+  <p class="text-zinc-500 text-sm">Cargando tu agenda...</p>
+</div>
+
+<div class="flex h-screen">
+  <!-- Sidebar -->
+  <div class="w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0">
+    <div class="p-7 border-b border-zinc-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-2xl flex items-center justify-center text-xl">🎓</div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight leading-tight">Agenda Facultad</h1>
+          <p class="text-xs text-zinc-500">Martín Ignacio</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <button onclick="cambiarTab(0)" id="tab-0" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-calendar-day w-4 text-center"></i><span class="font-medium text-sm">Diario</span>
+      </button>
+      <button onclick="cambiarTab(1)" id="tab-1" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-book w-4 text-center"></i><span class="font-medium text-sm">Materias</span>
+      </button>
+      <button onclick="cambiarTab(2)" id="tab-2" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-graduation-cap w-4 text-center"></i><span class="font-medium text-sm">Exámenes</span>
+        <span id="badge-examenes" class="ml-auto hidden bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+      </button>
+      <button onclick="cambiarTab(3)" id="tab-3" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-calendar-week w-4 text-center"></i><span class="font-medium text-sm">Semanal</span>
+      </button>
+      <button onclick="cambiarTab(4)" id="tab-4" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-chart-bar w-4 text-center"></i><span class="font-medium text-sm">Mensual</span>
+      </button>
+    </nav>
+
+    <div id="proximo-examen-mini" class="mx-3 mb-3 hidden"></div>
+
+    <div class="p-5 border-t border-zinc-800 text-xs text-zinc-500 space-y-2">
+      <div class="flex items-center justify-between">
+        <span id="stats-total">0 entradas</span>
+        <span id="stats-racha" class="text-emerald-400 font-medium">🔥 0 días</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <span id="stats-horas">0 h totales</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="flex-1 overflow-auto">
+    <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-10">
+      <div class="max-w-5xl mx-auto px-10 py-6 flex items-center justify-between">
+        <div id="header-title" class="text-2xl font-bold tracking-tight">Diario de hoy</div>
+        <div class="flex items-center gap-6">
+          <div id="fecha-hoy" class="text-zinc-400 text-sm"></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-5xl mx-auto px-10 py-8">
+
+      <!-- PANEL DIARIO -->
+      <div id="panel-0">
+        <div id="sin-materias-diario" class="hidden glass border border-amber-700/40 rounded-3xl p-8 mb-8 text-center">
+          <p class="text-4xl mb-3">📖</p>
+          <p class="text-zinc-300 mb-4">Todavía no cargaste ninguna materia. Creá al menos una antes de registrar entradas.</p>
+          <button onclick="cambiarTab(1)" class="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Ir a Materias</button>
+        </div>
+
+        <div id="form-diario-wrap" class="glass border border-zinc-700 rounded-3xl p-8 mb-10">
+          <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+            <span id="form-diario-titulo">📝 Nueva entrada</span>
+          </h2>
+          <form id="form-diario" class="space-y-5">
+            <input type="hidden" id="entrada-edit-id">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Materia</label>
+                <select id="entrada-materia" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required></select>
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Fecha</label>
+                <input type="date" id="fecha" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Horas estudiadas</label>
+                <input id="horas" type="number" step="0.5" min="0" placeholder="2.5" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-zinc-400 mb-2">¿Qué estudié / avancé?</label>
+              <textarea id="tema" rows="2" placeholder="Unidad 3 - Derivadas parciales" class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-4 py-3.5 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Videos / Recursos</label>
+                <input id="videos" type="text" placeholder="Video teórico cátedra - clase 5" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Ejercicios / Tareas</label>
+                <input id="tareas" type="text" placeholder="Guía 4, ejercicios 1 a 6" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm text-zinc-400 mb-2">Notas / Dudas / Logros</label>
+              <textarea id="notas" rows="3" placeholder="Me costó entender el cambio de variable..." class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-4 py-3.5 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+
+            <div class="flex gap-3">
+              <button type="submit" id="btn-guardar-entrada" class="flex-1 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-3xl font-semibold transition-all active:scale-95">
+                Guardar entrada del día
+              </button>
+              <button type="button" id="btn-cancelar-edicion" onclick="cancelarEdicionEntrada()" class="hidden px-6 py-3.5 rounded-3xl font-medium bg-zinc-800 hover:bg-zinc-700 transition-colors">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="text-lg font-semibold flex items-center gap-2"><i class="fas fa-history"></i> Historial de entradas</h3>
+          <select id="filtro-materia-diario" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500">
+            <option value="todas">Todas las materias</option>
+          </select>
+        </div>
+        <div id="lista-diario" class="space-y-5"></div>
+      </div>
+
+      <!-- PANEL MATERIAS -->
+      <div id="panel-1" class="hidden">
+        <div class="glass border border-zinc-700 rounded-3xl p-8 mb-8">
+          <h2 class="text-xl font-semibold mb-6">➕ Nueva materia</h2>
+          <form id="form-materia" class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+            <div class="flex-1 w-full">
+              <label class="block text-sm text-zinc-400 mb-2">Nombre de la materia</label>
+              <input id="materia-nombre" type="text" placeholder="Análisis Matemático II" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-400 mb-2">Color</label>
+              <div id="color-picker" class="flex gap-2"></div>
+            </div>
+            <button type="submit" class="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-6 py-3.5 rounded-2xl font-semibold transition-all active:scale-95 whitespace-nowrap">Agregar</button>
+          </form>
+        </div>
+        <div id="lista-materias" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
+      </div>
+
+      <!-- PANEL EXAMENES -->
+      <div id="panel-2" class="hidden">
+        <div id="sin-materias-examen" class="hidden glass border border-amber-700/40 rounded-3xl p-8 mb-8 text-center">
+          <p class="text-4xl mb-3">📖</p>
+          <p class="text-zinc-300 mb-4">Cargá al menos una materia para poder anotar exámenes.</p>
+          <button onclick="cambiarTab(1)" class="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Ir a Materias</button>
+        </div>
+        <div id="form-examen-wrap" class="glass border border-zinc-700 rounded-3xl p-8 mb-10">
+          <h2 class="text-xl font-semibold mb-6">📌 Nuevo examen / entrega</h2>
+          <form id="form-examen" class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Materia</label>
+                <select id="examen-materia" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required></select>
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Fecha</label>
+                <input type="date" id="examen-fecha" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-400 mb-2">Tema / Unidades que entran</label>
+              <input id="examen-tema" type="text" placeholder="Parcial 2 - Unidades 3, 4 y 5" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm text-zinc-400 mb-2">Notas</label>
+              <textarea id="examen-notas" rows="2" placeholder="Con carpeta abierta, entran los 3 primeros TP" class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-4 py-3.5 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-3xl font-semibold transition-all active:scale-95">Agregar al calendario</button>
+          </form>
+        </div>
+
+        <h3 class="text-lg font-semibold mb-5 flex items-center gap-2"><i class="fas fa-hourglass-half"></i> Próximos</h3>
+        <div id="lista-examenes-proximos" class="space-y-4 mb-10"></div>
+
+        <h3 class="text-lg font-semibold mb-5 flex items-center gap-2 text-zinc-500"><i class="fas fa-check-circle"></i> Rendidos</h3>
+        <div id="lista-examenes-pasados" class="space-y-4"></div>
+      </div>
+
+      <!-- PANEL SEMANAL -->
+      <div id="panel-3" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Horas esta semana</p>
+            <p id="semana-horas-total" class="text-2xl font-bold">0h</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Días activos</p>
+            <p id="semana-dias-activos" class="text-2xl font-bold">0 / 7</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Promedio diario</p>
+            <p id="semana-promedio" class="text-2xl font-bold">0h</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Materia top</p>
+            <p id="semana-top-materia" class="text-lg font-bold truncate">—</p>
+          </div>
+        </div>
+        <div class="glass border border-zinc-700 rounded-3xl p-7 mb-8">
+          <h3 class="text-lg font-semibold mb-5">Horas por día (últimos 7 días)</h3>
+          <canvas id="chart-semanal" height="90"></canvas>
+        </div>
+        <div class="glass border border-zinc-700 rounded-3xl p-7">
+          <h3 class="text-lg font-semibold mb-5">Distribución por materia esta semana</h3>
+          <div id="semana-distribucion" class="space-y-3"></div>
+        </div>
+      </div>
+
+      <!-- PANEL MENSUAL -->
+      <div id="panel-4" class="hidden">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Horas este mes</p>
+            <p id="mes-horas-total" class="text-2xl font-bold">0h</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Días activos</p>
+            <p id="mes-dias-activos" class="text-2xl font-bold">0</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Racha actual</p>
+            <p id="mes-racha" class="text-2xl font-bold">0 días</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5">
+            <p class="text-xs text-zinc-500 mb-1">Materia top</p>
+            <p id="mes-top-materia" class="text-lg font-bold truncate">—</p>
+          </div>
+        </div>
+        <div class="glass border border-zinc-700 rounded-3xl p-7 mb-8">
+          <div class="flex items-center justify-between mb-5">
+            <h3 id="mes-titulo" class="text-lg font-semibold"></h3>
+            <div class="flex gap-2">
+              <button onclick="cambiarMes(-1)" class="w-9 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"><i class="fas fa-chevron-left"></i></button>
+              <button onclick="cambiarMes(1)" class="w-9 h-9 rounded-xl bg-zinc-800 hover:bg-zinc-700 transition-colors"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <div id="calendario-header" class="grid grid-cols-7 gap-2 mb-2 text-xs text-zinc-500 text-center"></div>
+          <div id="calendario-grid" class="grid grid-cols-7 gap-2"></div>
+        </div>
+        <div class="glass border border-zinc-700 rounded-3xl p-7">
+          <h3 class="text-lg font-semibold mb-5">Horas por materia este mes</h3>
+          <div id="mes-distribucion" class="space-y-3"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed bottom-6 right-6 flex flex-col gap-3 z-50"></div>
+
+<script>
+/* ---------- Paleta de colores para materias ---------- */
+const PALETTE = [
+  { nombre:'Azul',     dot:'bg-blue-500',    soft:'bg-blue-500/10',    text:'text-blue-400',    border:'border-blue-500/40',    hex:'#3b82f6' },
+  { nombre:'Esmeralda',dot:'bg-emerald-500', soft:'bg-emerald-500/10', text:'text-emerald-400', border:'border-emerald-500/40', hex:'#10b981' },
+  { nombre:'Ámbar',    dot:'bg-amber-500',   soft:'bg-amber-500/10',   text:'text-amber-400',   border:'border-amber-500/40',   hex:'#f59e0b' },
+  { nombre:'Rosa',     dot:'bg-pink-500',    soft:'bg-pink-500/10',    text:'text-pink-400',    border:'border-pink-500/40',    hex:'#ec4899' },
+  { nombre:'Púrpura',  dot:'bg-purple-500',  soft:'bg-purple-500/10',  text:'text-purple-400',  border:'border-purple-500/40',  hex:'#a855f7' },
+  { nombre:'Cian',     dot:'bg-cyan-500',    soft:'bg-cyan-500/10',    text:'text-cyan-400',    border:'border-cyan-500/40',    hex:'#06b6d4' },
+  { nombre:'Naranja',  dot:'bg-orange-500',  soft:'bg-orange-500/10',  text:'text-orange-400',  border:'border-orange-500/40',  hex:'#f97316' },
+  { nombre:'Rojo',     dot:'bg-red-500',     soft:'bg-red-500/10',     text:'text-red-400',     border:'border-red-500/40',     hex:'#ef4444' },
+];
+
+/* ---------- Configuración de la API (Google Apps Script) ---------- */
+// 1. Pegá acá la URL que te da Apps Script al hacer "Deploy > Web app" (termina en /exec)
+// 2. Pegá el mismo TOKEN que pusiste en Code.gs
+const API_URL = 'https://script.google.com/macros/s/AKfycbxbnfTU6TY8p_4h_4kfPUTkTdhd96EEt_tYRBBtN6FH2F5g6Jpin7AgsBmDrnxfvO4-rA/exec';
+const API_TOKEN = 'Mriq130405.';
+
+/* ---------- Estado ---------- */
+let materias = [];
+let entradas = [];
+let examenes = [];
+let colorSeleccionado = 0;
+let entradaEditando = null;
+let mesActual = new Date();
+let chartSemanal = null;
+
+/* ---------- Storage helpers (via Google Apps Script) ---------- */
+function apiConfigurada() {
+  return API_URL && API_URL.startsWith('http');
+}
+async function cargarTodo() {
+  const res = await fetch(`${API_URL}?action=getAll&token=${encodeURIComponent(API_TOKEN)}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data; // { materias, entradas, examenes }
+}
+async function guardarColeccion(key, data) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
+      body: JSON.stringify({ token: API_TOKEN, key, data }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+  } catch (e) {
+    mostrarToast('⚠️ No se pudo guardar en la nube. Revisá tu conexión.', 'error');
+  }
+}
+
+/* ---------- Utilidades ---------- */
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function fmtFecha(fecha) {
+  const [y,m,d] = fecha.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+}
+function fmtFechaCorta(fecha) {
+  const [y,m,d] = fecha.split('-').map(Number);
+  return new Date(y, m-1, d).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function hoyISO() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+function diasEntre(fechaISO) {
+  const [y,m,d] = fechaISO.split('-').map(Number);
+  const target = new Date(y, m-1, d);
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+  target.setHours(0,0,0,0);
+  return Math.round((target - hoy) / 86400000);
+}
+function materiaPorId(id) { return materias.find(m => m.id === id); }
+function colorDe(materia) { return PALETTE[(materia && materia.colorIdx) || 0]; }
+function mostrarToast(msg, tipo='ok', accion=null) {
+  const el = document.createElement('div');
+  const base = tipo === 'error' ? 'bg-red-600' : 'bg-emerald-600';
+  el.className = `${base} text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 anim-in`;
+  el.innerHTML = `<span class="text-sm">${msg}</span>`;
+  if (accion) {
+    const btn = document.createElement('button');
+    btn.className = 'underline text-sm font-medium';
+    btn.textContent = accion.label;
+    btn.onclick = () => { accion.fn(); el.remove(); };
+    el.appendChild(btn);
+  }
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+/* ---------- Materias ---------- */
+function renderColorPicker() {
+  const wrap = document.getElementById('color-picker');
+  wrap.innerHTML = PALETTE.map((c, i) => `
+    <button type="button" onclick="colorSeleccionado=${i}; renderColorPicker();"
+      class="w-8 h-8 rounded-full ${c.dot} ${colorSeleccionado===i ? 'ring-2 ring-offset-2 ring-offset-zinc-900 ring-white' : 'opacity-50'}"
+      title="${c.nombre}"></button>
+  `).join('');
+}
+
+function renderSelectMaterias() {
+  const opts = materias.map(m => `<option value="${m.id}">${escapeHtml(m.nombre)}</option>`).join('');
+  const selEntrada = document.getElementById('entrada-materia');
+  const selExamen = document.getElementById('examen-materia');
+  const filtro = document.getElementById('filtro-materia-diario');
+  const prevEntrada = selEntrada.value, prevExamen = selExamen.value, prevFiltro = filtro.value;
+  selEntrada.innerHTML = opts;
+  selExamen.innerHTML = opts;
+  filtro.innerHTML = '<option value="todas">Todas las materias</option>' + opts;
+  if (materias.some(m => m.id === prevEntrada)) selEntrada.value = prevEntrada;
+  if (materias.some(m => m.id === prevExamen)) selExamen.value = prevExamen;
+  if (prevFiltro === 'todas' || materias.some(m => m.id === prevFiltro)) filtro.value = prevFiltro;
+
+  const sinMaterias = materias.length === 0;
+  document.getElementById('sin-materias-diario').classList.toggle('hidden', !sinMaterias);
+  document.getElementById('form-diario-wrap').classList.toggle('hidden', sinMaterias);
+  document.getElementById('sin-materias-examen').classList.toggle('hidden', !sinMaterias);
+  document.getElementById('form-examen-wrap').classList.toggle('hidden', sinMaterias);
+}
+
+function renderMaterias() {
+  const cont = document.getElementById('lista-materias');
+  if (materias.length === 0) {
+    cont.innerHTML = `<div class="md:col-span-2 glass border border-zinc-700 rounded-3xl p-12 text-center">
+      <p class="text-5xl mb-4">📚</p><p class="text-zinc-400">Todavía no cargaste materias.</p></div>`;
+    renderSelectMaterias();
+    return;
+  }
+  cont.innerHTML = materias.map(m => {
+    const c = colorDe(m);
+    const horas = entradas.filter(e => e.materiaId === m.id).reduce((s,e) => s + (e.horas||0), 0);
+    const nEx = examenes.filter(ex => ex.materiaId === m.id && !ex.rendido).length;
+    return `
+    <div class="glass border ${c.border} rounded-3xl p-6 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <span class="w-3.5 h-3.5 rounded-full ${c.dot}"></span>
+          <h4 class="font-semibold text-lg">${escapeHtml(m.nombre)}</h4>
+        </div>
+        <button onclick="borrarMateria('${m.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
+      </div>
+      <div class="flex gap-5 text-sm text-zinc-400">
+        <span><i class="fas fa-clock mr-1.5"></i>${horas}h estudiadas</span>
+        ${nEx > 0 ? `<span class="${c.text}"><i class="fas fa-graduation-cap mr-1.5"></i>${nEx} examen${nEx>1?'es':''} pendiente${nEx>1?'s':''}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  renderSelectMaterias();
+}
+
+document.getElementById('form-materia').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nombre = document.getElementById('materia-nombre').value.trim();
+  if (!nombre) return;
+  materias.push({ id: uid(), nombre, colorIdx: colorSeleccionado });
+  await guardarColeccion('materias', materias);
+  e.target.reset();
+  colorSeleccionado = (colorSeleccionado + 1) % PALETTE.length;
+  renderColorPicker();
+  renderMaterias();
+  renderTodo();
+  mostrarToast('✅ Materia agregada');
+});
+
+async function borrarMateria(id) {
+  const materia = materiaPorId(id);
+  const relacionadas = entradas.filter(e => e.materiaId === id).length + examenes.filter(ex => ex.materiaId === id).length;
+  const respaldo = { materias:[...materias], entradas:[...entradas], examenes:[...examenes] };
+  materias = materias.filter(m => m.id !== id);
+  entradas = entradas.filter(e => e.materiaId !== id);
+  examenes = examenes.filter(ex => ex.materiaId !== id);
+  await Promise.all([guardarColeccion('materias', materias), guardarColeccion('entradas', entradas), guardarColeccion('examenes', examenes)]);
+  renderTodo();
+  mostrarToast(`🗑️ "${escapeHtml(materia.nombre)}" eliminada${relacionadas ? ` (junto con ${relacionadas} registro/s)` : ''}`, 'ok', {
+    label: 'Deshacer',
+    fn: async () => { materias = respaldo.materias; entradas = respaldo.entradas; examenes = respaldo.examenes;
+      await Promise.all([guardarColeccion('materias', materias), guardarColeccion('entradas', entradas), guardarColeccion('examenes', examenes)]);
+      renderTodo(); }
+  });
+}
+
+/* ---------- Entradas (diario) ---------- */
+function renderDiario() {
+  const cont = document.getElementById('lista-diario');
+  const filtro = document.getElementById('filtro-materia-diario').value;
+  let lista = [...entradas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  if (filtro !== 'todas') lista = lista.filter(e => e.materiaId === filtro);
+
+  if (lista.length === 0) {
+    cont.innerHTML = `<div class="glass border border-zinc-700 rounded-3xl p-12 text-center">
+      <p class="text-5xl mb-4">🌱</p><p class="text-zinc-400">Todavía no hay entradas.<br>¡Empezá hoy mismo!</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = lista.map(entry => {
+    const m = materiaPorId(entry.materiaId);
+    const c = colorDe(m);
+    return `
+    <div class="glass border border-zinc-700 rounded-3xl p-7 card-hover">
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="${c.soft} ${c.text} px-3 py-1 rounded-full text-xs font-semibold">${m ? escapeHtml(m.nombre) : 'Sin materia'}</span>
+          <span class="text-emerald-400 text-sm font-medium">${fmtFecha(entry.fecha)}</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs">${entry.horas ? entry.horas + 'h' : '—'}</span>
+          <button onclick="editarEntrada('${entry.id}')" class="text-zinc-500 hover:text-blue-400 transition-colors"><i class="fas fa-pen text-sm"></i></button>
+          <button onclick="borrarEntrada('${entry.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
+        </div>
+      </div>
+      <h4 class="font-semibold text-lg mb-2">${escapeHtml(entry.tema) || 'Sin descripción'}</h4>
+      ${entry.videos ? `<p class="text-blue-400 text-sm mb-1.5">🎥 ${escapeHtml(entry.videos)}</p>` : ''}
+      ${entry.tareas ? `<p class="text-amber-400 text-sm mb-1.5">✅ ${escapeHtml(entry.tareas)}</p>` : ''}
+      ${entry.notas ? `<p class="text-zinc-300 italic border-l-2 border-zinc-600 pl-4 mt-3">"${escapeHtml(entry.notas)}"</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('filtro-materia-diario').addEventListener('change', renderDiario);
+
+document.getElementById('form-diario').addEventListener('submit', async e => {
+  e.preventDefault();
+  const data = {
+    materiaId: document.getElementById('entrada-materia').value,
+    fecha: document.getElementById('fecha').value,
+    horas: parseFloat(document.getElementById('horas').value) || 0,
+    tema: document.getElementById('tema').value.trim(),
+    videos: document.getElementById('videos').value.trim(),
+    tareas: document.getElementById('tareas').value.trim(),
+    notas: document.getElementById('notas').value.trim(),
+  };
+  if (entradaEditando) {
+    const idx = entradas.findIndex(x => x.id === entradaEditando);
+    entradas[idx] = { ...entradas[idx], ...data };
+    entradaEditando = null;
+    mostrarToast('✅ Entrada actualizada');
+  } else {
+    entradas.unshift({ id: uid(), ...data });
+    mostrarToast('✅ Entrada guardada con éxito');
+  }
+  await guardarColeccion('entradas', entradas);
+  e.target.reset();
+  document.getElementById('fecha').value = hoyISO();
+  document.getElementById('btn-guardar-entrada').textContent = 'Guardar entrada del día';
+  document.getElementById('btn-cancelar-edicion').classList.add('hidden');
+  document.getElementById('form-diario-titulo').textContent = '📝 Nueva entrada';
+  renderTodo();
+});
+
+function editarEntrada(id) {
+  const entry = entradas.find(e => e.id === id);
+  if (!entry) return;
+  entradaEditando = id;
+  document.getElementById('entrada-materia').value = entry.materiaId;
+  document.getElementById('fecha').value = entry.fecha;
+  document.getElementById('horas').value = entry.horas || '';
+  document.getElementById('tema').value = entry.tema || '';
+  document.getElementById('videos').value = entry.videos || '';
+  document.getElementById('tareas').value = entry.tareas || '';
+  document.getElementById('notas').value = entry.notas || '';
+  document.getElementById('btn-guardar-entrada').textContent = 'Actualizar entrada';
+  document.getElementById('btn-cancelar-edicion').classList.remove('hidden');
+  document.getElementById('form-diario-titulo').textContent = '✏️ Editando entrada';
+  cambiarTab(0);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function cancelarEdicionEntrada() {
+  entradaEditando = null;
+  document.getElementById('form-diario').reset();
+  document.getElementById('fecha').value = hoyISO();
+  document.getElementById('btn-guardar-entrada').textContent = 'Guardar entrada del día';
+  document.getElementById('btn-cancelar-edicion').classList.add('hidden');
+  document.getElementById('form-diario-titulo').textContent = '📝 Nueva entrada';
+}
+async function borrarEntrada(id) {
+  const idx = entradas.findIndex(e => e.id === id);
+  const respaldo = entradas[idx];
+  entradas = entradas.filter(e => e.id !== id);
+  await guardarColeccion('entradas', entradas);
+  renderTodo();
+  mostrarToast('🗑️ Entrada eliminada', 'ok', {
+    label: 'Deshacer',
+    fn: async () => { entradas.splice(idx, 0, respaldo); await guardarColeccion('entradas', entradas); renderTodo(); }
+  });
+}
+
+/* ---------- Exámenes ---------- */
+function renderExamenes() {
+  const proximos = examenes.filter(e => !e.rendido).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  const pasados = examenes.filter(e => e.rendido).sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+  const contProx = document.getElementById('lista-examenes-proximos');
+  contProx.innerHTML = proximos.length === 0
+    ? `<div class="glass border border-zinc-700 rounded-3xl p-10 text-center"><p class="text-4xl mb-3">🎉</p><p class="text-zinc-400">No tenés exámenes pendientes cargados.</p></div>`
+    : proximos.map(ex => cardExamen(ex, true)).join('');
+
+  const contPas = document.getElementById('lista-examenes-pasados');
+  contPas.innerHTML = pasados.length === 0
+    ? `<p class="text-zinc-600 text-sm">Todavía no rendiste ningún examen cargado acá.</p>`
+    : pasados.map(ex => cardExamen(ex, false)).join('');
+
+  // Badge urgente en sidebar
+  const urgentes = proximos.filter(ex => diasEntre(ex.fecha) <= 3).length;
+  const badge = document.getElementById('badge-examenes');
+  if (urgentes > 0) { badge.textContent = urgentes; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+
+  // Mini próximo examen en sidebar
+  const mini = document.getElementById('proximo-examen-mini');
+  if (proximos.length > 0) {
+    const ex = proximos[0];
+    const m = materiaPorId(ex.materiaId);
+    const c = colorDe(m);
+    const dias = diasEntre(ex.fecha);
+    mini.classList.remove('hidden');
+    mini.innerHTML = `<div class="glass border ${c.border} rounded-2xl p-4">
+      <p class="text-[11px] text-zinc-500 mb-1">Próximo examen</p>
+      <p class="text-sm font-semibold ${c.text} truncate">${m ? escapeHtml(m.nombre) : ''}</p>
+      <p class="text-xs text-zinc-400 mt-1">${dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : dias < 0 ? 'Atrasado' : `En ${dias} días`}</p>
+    </div>`;
+  } else {
+    mini.classList.add('hidden');
+  }
+}
+
+function cardExamen(ex, activo) {
+  const m = materiaPorId(ex.materiaId);
+  const c = colorDe(m);
+  const dias = diasEntre(ex.fecha);
+  let urgencia = 'bg-zinc-800 text-zinc-400';
+  let texto = `En ${dias} días`;
+  if (activo) {
+    if (dias < 0) { urgencia = 'bg-red-500/20 text-red-400'; texto = `Atrasado (${Math.abs(dias)}d)`; }
+    else if (dias === 0) { urgencia = 'bg-red-500/20 text-red-400'; texto = 'Es hoy'; }
+    else if (dias === 1) { urgencia = 'bg-orange-500/20 text-orange-400'; texto = 'Mañana'; }
+    else if (dias <= 3) { urgencia = 'bg-amber-500/20 text-amber-400'; texto = `En ${dias} días`; }
+    else if (dias <= 7) { urgencia = 'bg-blue-500/20 text-blue-400'; texto = `En ${dias} días`; }
+    else { urgencia = 'bg-emerald-500/20 text-emerald-400'; texto = `En ${dias} días`; }
+  }
+  return `
+  <div class="glass border ${c.border} rounded-3xl p-6 card-hover ${!activo ? 'opacity-60' : ''}">
+    <div class="flex justify-between items-start mb-2">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full ${c.dot}"></span>
+        <span class="font-semibold ${c.text}">${m ? escapeHtml(m.nombre) : 'Sin materia'}</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="px-3 py-1 rounded-full text-xs font-semibold ${urgencia}">${texto}</span>
+        <button onclick="toggleRendido('${ex.id}')" class="text-zinc-500 hover:${activo ? 'text-emerald-400' : 'text-zinc-300'} transition-colors" title="${activo ? 'Marcar como rendido' : 'Marcar como pendiente'}">
+          <i class="fas ${activo ? 'fa-check-circle' : 'fa-rotate-left'} text-sm"></i>
+        </button>
+        <button onclick="borrarExamen('${ex.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
+      </div>
+    </div>
+    <p class="text-sm text-zinc-400 mb-1">${fmtFechaCorta(ex.fecha)}</p>
+    ${ex.tema ? `<p class="font-medium">${escapeHtml(ex.tema)}</p>` : ''}
+    ${ex.notas ? `<p class="text-zinc-400 text-sm mt-2 italic">"${escapeHtml(ex.notas)}"</p>` : ''}
+  </div>`;
+}
+
+document.getElementById('form-examen').addEventListener('submit', async e => {
+  e.preventDefault();
+  examenes.push({
+    id: uid(),
+    materiaId: document.getElementById('examen-materia').value,
+    fecha: document.getElementById('examen-fecha').value,
+    tema: document.getElementById('examen-tema').value.trim(),
+    notas: document.getElementById('examen-notas').value.trim(),
+    rendido: false,
+  });
+  await guardarColeccion('examenes', examenes);
+  e.target.reset();
+  renderTodo();
+  mostrarToast('📌 Examen agregado al calendario');
+});
+
+async function toggleRendido(id) {
+  const ex = examenes.find(e => e.id === id);
+  ex.rendido = !ex.rendido;
+  await guardarColeccion('examenes', examenes);
+  renderTodo();
+}
+async function borrarExamen(id) {
+  const idx = examenes.findIndex(e => e.id === id);
+  const respaldo = examenes[idx];
+  examenes = examenes.filter(e => e.id !== id);
+  await guardarColeccion('examenes', examenes);
+  renderTodo();
+  mostrarToast('🗑️ Examen eliminado', 'ok', {
+    label: 'Deshacer',
+    fn: async () => { examenes.splice(idx, 0, respaldo); await guardarColeccion('examenes', examenes); renderTodo(); }
+  });
+}
+
+/* ---------- Stats globales (sidebar) ---------- */
+function calcularRacha() {
+  const dias = new Set(entradas.map(e => e.fecha));
+  let racha = 0;
+  let cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  const hoyStr = hoyISO();
+  if (!dias.has(hoyStr)) cursor.setDate(cursor.getDate() - 1);
+  while (true) {
+    const iso = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
+    if (dias.has(iso)) { racha++; cursor.setDate(cursor.getDate() - 1); } else break;
+  }
+  return racha;
+}
+function renderStatsGlobales() {
+  document.getElementById('stats-total').textContent = `${entradas.length} entrada${entradas.length !== 1 ? 's' : ''}`;
+  document.getElementById('stats-racha').textContent = `🔥 ${calcularRacha()} días`;
+  const totalHoras = entradas.reduce((s,e) => s + (e.horas||0), 0);
+  document.getElementById('stats-horas').textContent = `${totalHoras}h totales`;
+}
+
+/* ---------- Semanal ---------- */
+function renderSemanal() {
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dias.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const horasPorDia = dias.map(iso => entradas.filter(e => e.fecha === iso).reduce((s,e) => s + (e.horas||0), 0));
+  const totalSemana = horasPorDia.reduce((a,b) => a+b, 0);
+  const diasActivos = horasPorDia.filter(h => h > 0).length;
+
+  document.getElementById('semana-horas-total').textContent = `${totalSemana}h`;
+  document.getElementById('semana-dias-activos').textContent = `${diasActivos} / 7`;
+  document.getElementById('semana-promedio').textContent = `${(totalSemana/7).toFixed(1)}h`;
+
+  const porMateria = {};
+  entradas.filter(e => dias.includes(e.fecha)).forEach(e => {
+    porMateria[e.materiaId] = (porMateria[e.materiaId]||0) + (e.horas||0);
+  });
+  const topId = Object.keys(porMateria).sort((a,b) => porMateria[b]-porMateria[a])[0];
+  const topMateria = topId ? materiaPorId(topId) : null;
+  document.getElementById('semana-top-materia').textContent = topMateria ? topMateria.nombre : '—';
+
+  const labels = dias.map(iso => { const [,,d] = iso.split('-'); return new Date(iso+'T00:00:00').toLocaleDateString('es-AR', { weekday:'short' }); });
+  const ctx = document.getElementById('chart-semanal').getContext('2d');
+  if (chartSemanal) chartSemanal.destroy();
+  chartSemanal = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 8, maxBarThickness: 40 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
+        x: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+      }
+    }
+  });
+
+  const distCont = document.getElementById('semana-distribucion');
+  const entries = Object.entries(porMateria).sort((a,b) => b[1]-a[1]);
+  distCont.innerHTML = entries.length === 0
+    ? `<p class="text-zinc-600 text-sm">Sin registros esta semana.</p>`
+    : entries.map(([id, h]) => {
+      const m = materiaPorId(id);
+      const c = colorDe(m);
+      const pct = totalSemana ? Math.round((h/totalSemana)*100) : 0;
+      return `<div>
+        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${h}h</span></div>
+        <div class="w-full bg-zinc-800 rounded-full h-2"><div class="${c.dot} h-2 rounded-full" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+}
+
+/* ---------- Mensual ---------- */
+function cambiarMes(delta) {
+  mesActual.setMonth(mesActual.getMonth() + delta);
+  renderMensual();
+}
+function renderMensual() {
+  const year = mesActual.getFullYear();
+  const month = mesActual.getMonth();
+  document.getElementById('mes-titulo').textContent = mesActual.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+
+  const header = document.getElementById('calendario-header');
+  header.innerHTML = ['L','M','X','J','V','S','D'].map(d => `<div>${d}</div>`).join('');
+
+  const primerDia = new Date(year, month, 1);
+  let offset = primerDia.getDay() - 1; if (offset < 0) offset = 6;
+  const diasEnMes = new Date(year, month+1, 0).getDate();
+  const hoyStr = hoyISO();
+
+  const entradasDelMes = entradas.filter(e => {
+    const [y,m] = e.fecha.split('-').map(Number);
+    return y === year && (m-1) === month;
+  });
+
+  const grid = document.getElementById('calendario-grid');
+  let html = '';
+  for (let i = 0; i < offset; i++) html += `<div></div>`;
+  for (let dia = 1; dia <= diasEnMes; dia++) {
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const delDia = entradasDelMes.filter(e => e.fecha === iso);
+    const horas = delDia.reduce((s,e) => s + (e.horas||0), 0);
+    const esHoy = iso === hoyStr;
+    let bg = 'bg-zinc-900';
+    if (horas > 3) bg = 'bg-emerald-500';
+    else if (horas > 1.5) bg = 'bg-emerald-600/60';
+    else if (horas > 0) bg = 'bg-emerald-700/40';
+    html += `<div class="aspect-square rounded-xl ${bg} border ${esHoy ? 'border-blue-400' : 'border-zinc-800'} flex flex-col items-center justify-center text-xs ${horas>0?'text-white':'text-zinc-600'} relative" title="${horas}h">
+      <span class="${esHoy ? 'font-bold text-blue-300' : ''}">${dia}</span>
+      ${horas > 0 ? `<span class="text-[9px] mt-0.5 opacity-80">${horas}h</span>` : ''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+
+  const totalMes = entradasDelMes.reduce((s,e) => s + (e.horas||0), 0);
+  const diasActivosMes = new Set(entradasDelMes.map(e => e.fecha)).size;
+  document.getElementById('mes-horas-total').textContent = `${totalMes}h`;
+  document.getElementById('mes-dias-activos').textContent = diasActivosMes;
+  document.getElementById('mes-racha').textContent = `${calcularRacha()} días`;
+
+  const porMateria = {};
+  entradasDelMes.forEach(e => { porMateria[e.materiaId] = (porMateria[e.materiaId]||0) + (e.horas||0); });
+  const topId = Object.keys(porMateria).sort((a,b) => porMateria[b]-porMateria[a])[0];
+  document.getElementById('mes-top-materia').textContent = topId ? materiaPorId(topId).nombre : '—';
+
+  const distCont = document.getElementById('mes-distribucion');
+  const entries = Object.entries(porMateria).sort((a,b) => b[1]-a[1]);
+  distCont.innerHTML = entries.length === 0
+    ? `<p class="text-zinc-600 text-sm">Sin registros este mes.</p>`
+    : entries.map(([id, h]) => {
+      const m = materiaPorId(id);
+      const c = colorDe(m);
+      const pct = totalMes ? Math.round((h/totalMes)*100) : 0;
+      return `<div>
+        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${h}h</span></div>
+        <div class="w-full bg-zinc-800 rounded-full h-2"><div class="${c.dot} h-2 rounded-full" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+}
+
+/* ---------- Tabs ---------- */
+function cambiarTab(n) {
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.classList.add('hidden'));
+  document.getElementById(`panel-${n}`).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('tab-active'));
+  document.getElementById(`tab-${n}`).classList.add('tab-active');
+  const titulos = ['Diario de hoy', 'Mis materias', 'Exámenes y entregas', 'Resumen semanal', 'Vista mensual'];
+  document.getElementById('header-title').textContent = titulos[n];
+  if (n === 3) renderSemanal();
+  if (n === 4) renderMensual();
+}
+
+/* ---------- Render general ---------- */
+function renderTodo() {
+  renderMaterias();
+  renderDiario();
+  renderExamenes();
+  renderStatsGlobales();
+  const panelActivo = [0,1,2,3,4].find(n => !document.getElementById(`panel-${n}`).classList.contains('hidden'));
+  if (panelActivo === 3) renderSemanal();
+  if (panelActivo === 4) renderMensual();
+}
+
+/* ---------- Init ---------- */
+async function init() {
+  document.getElementById('fecha').value = hoyISO();
+  document.getElementById('fecha-hoy').innerHTML = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  renderColorPicker();
+
+  if (!apiConfigurada()) {
+    document.getElementById('loading-overlay').innerHTML = `
+      <div class="max-w-md text-center px-6">
+        <p class="text-4xl mb-4">🔧</p>
+        <p class="text-zinc-300 font-semibold mb-2">Falta configurar la API</p>
+        <p class="text-zinc-500 text-sm">Pegá la URL de tu deploy de Apps Script en la constante <code class="text-emerald-400">API_URL</code>, dentro del &lt;script&gt; del HTML.</p>
+      </div>`;
+    return;
+  }
+
+  try {
+    const data = await cargarTodo();
+    materias = data.materias || [];
+    entradas = data.entradas || [];
+    examenes = data.examenes || [];
+    renderTodo();
+    cambiarTab(0);
+    document.getElementById('loading-overlay').style.display = 'none';
+  } catch (e) {
+    document.getElementById('loading-overlay').innerHTML = `
+      <div class="max-w-md text-center px-6">
+        <p class="text-4xl mb-4">⚠️</p>
+        <p class="text-zinc-300 font-semibold mb-2">No se pudo conectar con la agenda</p>
+        <p class="text-zinc-500 text-sm">Revisá que la URL de <code class="text-emerald-400">API_URL</code> y el <code class="text-emerald-400">API_TOKEN</code> sean correctos, y que el deploy de Apps Script tenga acceso "Anyone".</p>
+        <button onclick="location.reload()" class="mt-5 bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Reintentar</button>
+      </div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

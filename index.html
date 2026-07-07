@@ -300,6 +300,11 @@
           </div>
           <div id="calendario-header" class="grid grid-cols-7 gap-2 mb-2 text-xs text-zinc-500 text-center"></div>
           <div id="calendario-grid" class="grid grid-cols-7 gap-2"></div>
+          <div class="flex items-center gap-4 mt-5 text-xs text-zinc-500">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Entrada registrada</span>
+            <span class="flex items-center gap-1.5"><i class="fas fa-star text-amber-400 text-[10px]"></i>Examen ese día</span>
+          </div>
+          <div id="detalle-dia" class="hidden mt-6 pt-6 border-t border-zinc-800"></div>
         </div>
         <div class="glass border border-zinc-700 rounded-3xl p-7">
           <h3 class="text-lg font-semibold mb-5">Horas por materia este mes</h3>
@@ -1008,6 +1013,7 @@ function renderSemanal() {
 /* ---------- Mensual ---------- */
 function cambiarMes(delta) {
   mesActual.setMonth(mesActual.getMonth() + delta);
+  document.getElementById('detalle-dia').classList.add('hidden');
   renderMensual();
 }
 function renderMensual() {
@@ -1027,6 +1033,10 @@ function renderMensual() {
     const [y,m] = e.fecha.split('-').map(Number);
     return y === year && (m-1) === month;
   });
+  const examenesDelMes = examenes.filter(ex => {
+    const [y,m] = ex.fecha.split('-').map(Number);
+    return y === year && (m-1) === month;
+  });
 
   const grid = document.getElementById('calendario-grid');
   let html = '';
@@ -1034,16 +1044,23 @@ function renderMensual() {
   for (let dia = 1; dia <= diasEnMes; dia++) {
     const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
     const delDia = entradasDelMes.filter(e => e.fecha === iso);
+    const examenesDia = examenesDelMes.filter(ex => ex.fecha === iso);
     const horas = delDia.reduce((s,e) => s + (e.horas||0), 0);
     const esHoy = iso === hoyStr;
     let bg = 'bg-zinc-900';
     if (horas > 3) bg = 'bg-emerald-500';
     else if (horas > 1.5) bg = 'bg-emerald-600/60';
     else if (horas > 0) bg = 'bg-emerald-700/40';
-    html += `<div class="aspect-square rounded-xl ${bg} border ${esHoy ? 'border-blue-400' : 'border-zinc-800'} flex flex-col items-center justify-center text-xs ${horas>0?'text-white':'text-zinc-600'} relative" title="${horas}h">
+
+    const materiasDelDia = [...new Set(delDia.map(e => e.materiaId))];
+    const dots = materiasDelDia.slice(0, 4).map(id => `<span class="w-1.5 h-1.5 rounded-full ${colorDe(materiaPorId(id)).dot}"></span>`).join('');
+    const extra = materiasDelDia.length > 4 ? `<span class="text-[8px] text-zinc-400">+${materiasDelDia.length - 4}</span>` : '';
+
+    html += `<button onclick="mostrarDetalleDia('${iso}')" class="aspect-square rounded-xl ${bg} border ${esHoy ? 'border-blue-400' : 'border-zinc-800'} hover:border-zinc-500 transition-colors flex flex-col items-center justify-center text-xs ${horas>0?'text-white':'text-zinc-600'} relative p-1" title="${horas}h${examenesDia.length ? ' · ' + examenesDia.length + ' examen(es)' : ''}">
+      ${examenesDia.length ? `<i class="fas fa-star text-amber-400 text-[9px] absolute top-1.5 right-1.5"></i>` : ''}
       <span class="${esHoy ? 'font-bold text-blue-300' : ''}">${dia}</span>
-      ${horas > 0 ? `<span class="text-[9px] mt-0.5 opacity-80">${horas}h</span>` : ''}
-    </div>`;
+      ${dots ? `<div class="flex gap-0.5 mt-1 items-center">${dots}${extra}</div>` : ''}
+    </button>`;
   }
   grid.innerHTML = html;
 
@@ -1071,6 +1088,64 @@ function renderMensual() {
         <div class="w-full bg-zinc-800 rounded-full h-2"><div class="${c.dot} h-2 rounded-full" style="width:${pct}%"></div></div>
       </div>`;
     }).join('');
+}
+
+let diaSeleccionado = null;
+function mostrarDetalleDia(iso) {
+  diaSeleccionado = iso;
+  const cont = document.getElementById('detalle-dia');
+  const delDia = entradas.filter(e => e.fecha === iso);
+  const examenesDia = examenes.filter(ex => ex.fecha === iso);
+
+  let html = `<div class="flex items-center justify-between mb-4">
+    <h4 class="font-semibold capitalize">${fmtFecha(iso)}</h4>
+    <button onclick="document.getElementById('detalle-dia').classList.add('hidden')" class="text-zinc-500 hover:text-zinc-300"><i class="fas fa-xmark"></i></button>
+  </div>`;
+
+  if (examenesDia.length === 0 && delDia.length === 0) {
+    html += `<p class="text-zinc-600 text-sm mb-4">Sin actividad registrada este día.</p>`;
+  } else {
+    examenesDia.forEach(ex => {
+      const m = materiaPorId(ex.materiaId);
+      const c = colorDe(m);
+      html += `<div class="flex items-center gap-2 mb-2 text-sm">
+        <i class="fas fa-star text-amber-400 text-xs"></i>
+        <span class="${c.text} font-medium">${m ? escapeHtml(m.nombre) : ''}</span>
+        <span class="text-zinc-400">${escapeHtml(ex.tema) || 'Examen'}</span>
+        ${ex.rendido ? '<span class="text-zinc-600 text-xs">(rendido)</span>' : ''}
+      </div>`;
+    });
+    delDia.forEach(e => {
+      const m = materiaPorId(e.materiaId);
+      const c = colorDe(m);
+      html += `<div class="flex items-center gap-2 mb-2 text-sm">
+        <span class="w-2 h-2 rounded-full ${c.dot}"></span>
+        <span class="${c.text} font-medium">${m ? escapeHtml(m.nombre) : ''}</span>
+        <span class="text-zinc-400 truncate">${escapeHtml(e.tema) || 'Sin descripción'}</span>
+        <span class="text-zinc-600 text-xs ml-auto shrink-0">${e.horas || 0}h</span>
+      </div>`;
+    });
+  }
+
+  html += `<div class="flex gap-3 mt-4">
+    <button onclick="agregarEntradaEnDia('${iso}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-2.5 rounded-2xl text-sm font-medium transition-colors"><i class="fas fa-plus mr-1.5"></i>Entrada</button>
+    <button onclick="agregarExamenEnDia('${iso}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-2.5 rounded-2xl text-sm font-medium transition-colors"><i class="fas fa-plus mr-1.5"></i>Examen</button>
+  </div>`;
+
+  cont.innerHTML = html;
+  cont.classList.remove('hidden');
+}
+function agregarEntradaEnDia(iso) {
+  if (materias.length === 0) { cambiarTab(1); return; }
+  cambiarTab(0);
+  document.getElementById('fecha').value = iso;
+  document.getElementById('tema').focus();
+}
+function agregarExamenEnDia(iso) {
+  if (materias.length === 0) { cambiarTab(1); return; }
+  cambiarTab(2);
+  document.getElementById('examen-fecha').value = iso;
+  document.getElementById('examen-tema').focus();
 }
 
 /* ---------- Pomodoro ---------- */

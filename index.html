@@ -46,6 +46,20 @@
   <p class="text-zinc-500 text-sm">Cargando tu agenda...</p>
 </div>
 
+<div id="pantalla-perfil" class="hidden fixed inset-0 bg-zinc-950 z-50 flex flex-col items-center justify-center gap-6 px-6">
+  <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-2xl flex items-center justify-center text-2xl">🎓</div>
+  <div class="text-center max-w-xs">
+    <p class="text-lg font-semibold mb-2">¿De quién es esta agenda?</p>
+    <p class="text-sm text-zinc-500">Cada nombre tiene sus propias materias, entradas y exámenes, aunque compartan el mismo link.</p>
+  </div>
+  <form id="form-perfil" class="w-full max-w-xs space-y-3">
+    <input id="perfil-nombre" type="text" placeholder="Tu nombre (ej: martin)" autocomplete="off"
+      class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 text-center focus:outline-none focus:border-blue-500" required>
+    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-2xl font-semibold transition-all active:scale-95">Continuar</button>
+  </form>
+  <p id="perfil-error" class="hidden text-red-400 text-sm">Escribí al menos un nombre.</p>
+</div>
+
 <div class="flex h-screen">
   <!-- Sidebar (solo desktop/tablet) -->
   <div class="hidden md:flex w-72 bg-zinc-900 border-r border-zinc-800 flex-col shrink-0">
@@ -94,6 +108,10 @@
       <div class="flex items-center gap-1.5" id="sync-indicator">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
         <span>Sincronizado</span>
+      </div>
+      <div class="flex items-center justify-between pt-1">
+        <span>Perfil: <span id="perfil-actual" class="text-zinc-300 font-medium">—</span></span>
+        <button onclick="cambiarPerfil()" class="text-zinc-500 hover:text-zinc-300 transition-colors underline">Cambiar</button>
       </div>
     </div>
   </div>
@@ -543,8 +561,20 @@ let pomoCiclos = 0;
 function apiConfigurada() {
   return API_URL && API_URL.startsWith('http');
 }
+
+/* Perfil: permite que la misma app/Sheet sirva a más de una persona
+   (por ejemplo vos y tu novia) sin mezclar los datos. El perfil se
+   guarda en este dispositivo/navegador, no en la nube. */
+function obtenerUsuario() {
+  return localStorage.getItem('agenda_usuario');
+}
+function limpiarNombreUsuario(nombre) {
+  return nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_-]/g, '');
+}
+
 async function cargarTodo() {
-  const res = await fetch(`${API_URL}?action=getAll&token=${encodeURIComponent(API_TOKEN)}`);
+  const usuario = obtenerUsuario();
+  const res = await fetch(`${API_URL}?action=getAll&token=${encodeURIComponent(API_TOKEN)}&usuario=${encodeURIComponent(usuario)}`);
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data; // { materias, entradas, examenes }
@@ -564,10 +594,11 @@ function actualizarEstadoSync() {
 
 async function intentarGuardar(key, data) {
   try {
+    const usuario = obtenerUsuario();
     const res = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // evita preflight CORS
-      body: JSON.stringify({ token: API_TOKEN, key, data }),
+      body: JSON.stringify({ token: API_TOKEN, key, data, usuario }),
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
@@ -1570,6 +1601,39 @@ async function init() {
     return;
   }
 
+  if (!obtenerUsuario()) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    document.getElementById('pantalla-perfil').classList.remove('hidden');
+    return; // el submit de form-perfil llama a iniciarConPerfil()
+  }
+
+  await iniciarConPerfil();
+}
+
+document.getElementById('form-perfil').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nombre = limpiarNombreUsuario(document.getElementById('perfil-nombre').value);
+  if (!nombre) {
+    document.getElementById('perfil-error').classList.remove('hidden');
+    return;
+  }
+  localStorage.setItem('agenda_usuario', nombre);
+  document.getElementById('pantalla-perfil').classList.add('hidden');
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  await iniciarConPerfil();
+});
+
+function cambiarPerfil() {
+  if (!confirm('¿Cambiar de perfil en este dispositivo? Vas a tener que volver a elegir un nombre.')) return;
+  localStorage.removeItem('agenda_usuario');
+  location.reload();
+}
+
+async function iniciarConPerfil() {
+  const usuario = obtenerUsuario();
+  const nombreEl = document.getElementById('perfil-actual');
+  if (nombreEl) nombreEl.textContent = usuario;
+
   try {
     const data = await cargarTodo();
     materias = data.materias || [];
@@ -1579,6 +1643,7 @@ async function init() {
     cambiarTab(0);
     document.getElementById('loading-overlay').style.display = 'none';
   } catch (e) {
+    document.getElementById('loading-overlay').classList.remove('hidden');
     document.getElementById('loading-overlay').innerHTML = `
       <div class="max-w-md text-center px-6">
         <p class="text-4xl mb-4">⚠️</p>

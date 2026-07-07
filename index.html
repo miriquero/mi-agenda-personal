@@ -63,6 +63,9 @@
       <button onclick="cambiarTab(4)" id="tab-4" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-chart-bar w-4 text-center"></i><span class="font-medium text-sm">Mensual</span>
       </button>
+      <button onclick="cambiarTab(6)" id="tab-6" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-magnifying-glass w-4 text-center"></i><span class="font-medium text-sm">Buscar</span>
+      </button>
     </nav>
 
     <div id="proximo-examen-mini" class="mx-3 mb-3 hidden"></div>
@@ -75,15 +78,25 @@
       <div class="flex items-center justify-between">
         <span id="stats-horas">0 h totales</span>
       </div>
+      <div class="flex items-center gap-1.5" id="sync-indicator">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span>Sincronizado</span>
+      </div>
     </div>
   </div>
 
   <!-- Main -->
   <div class="flex-1 overflow-auto">
     <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-10">
-      <div class="max-w-5xl mx-auto px-10 py-6 flex items-center justify-between">
-        <div id="header-title" class="text-2xl font-bold tracking-tight">Diario de hoy</div>
-        <div class="flex items-center gap-6">
+      <div class="max-w-5xl mx-auto px-10 py-6 flex items-center justify-between gap-6">
+        <div id="header-title" class="text-2xl font-bold tracking-tight whitespace-nowrap">Diario de hoy</div>
+        <div class="relative flex-1 max-w-sm">
+          <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
+          <input id="busqueda-global" type="text" placeholder="Buscar en toda la agenda..." autocomplete="off"
+            class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500">
+          <div id="busqueda-resultados" class="hidden absolute top-full mt-2 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl max-h-96 overflow-y-auto z-20"></div>
+        </div>
+        <div class="flex items-center gap-6 shrink-0">
           <div id="fecha-hoy" class="text-zinc-400 text-sm"></div>
         </div>
       </div>
@@ -162,8 +175,9 @@
       <!-- PANEL MATERIAS -->
       <div id="panel-1" class="hidden">
         <div class="glass border border-zinc-700 rounded-3xl p-8 mb-8">
-          <h2 class="text-xl font-semibold mb-6">➕ Nueva materia</h2>
+          <h2 id="form-materia-titulo" class="text-xl font-semibold mb-6">➕ Nueva materia</h2>
           <form id="form-materia" class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+            <input type="hidden" id="materia-edit-id">
             <div class="flex-1 w-full">
               <label class="block text-sm text-zinc-400 mb-2">Nombre de la materia</label>
               <input id="materia-nombre" type="text" placeholder="Análisis Matemático II" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
@@ -172,7 +186,8 @@
               <label class="block text-sm text-zinc-400 mb-2">Color</label>
               <div id="color-picker" class="flex gap-2"></div>
             </div>
-            <button type="submit" class="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-6 py-3.5 rounded-2xl font-semibold transition-all active:scale-95 whitespace-nowrap">Agregar</button>
+            <button type="submit" id="btn-guardar-materia" class="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-6 py-3.5 rounded-2xl font-semibold transition-all active:scale-95 whitespace-nowrap">Agregar</button>
+            <button type="button" id="btn-cancelar-materia" onclick="cancelarEdicionMateria()" class="hidden px-6 py-3.5 rounded-2xl font-medium bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap">Cancelar</button>
           </form>
         </div>
         <div id="lista-materias" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
@@ -186,8 +201,9 @@
           <button onclick="cambiarTab(1)" class="bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Ir a Materias</button>
         </div>
         <div id="form-examen-wrap" class="glass border border-zinc-700 rounded-3xl p-8 mb-10">
-          <h2 class="text-xl font-semibold mb-6">📌 Nuevo examen / entrega</h2>
+          <h2 id="form-examen-titulo" class="text-xl font-semibold mb-6">📌 Nuevo examen / entrega</h2>
           <form id="form-examen" class="space-y-5">
+            <input type="hidden" id="examen-edit-id">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label class="block text-sm text-zinc-400 mb-2">Materia</label>
@@ -206,7 +222,14 @@
               <label class="block text-sm text-zinc-400 mb-2">Notas</label>
               <textarea id="examen-notas" rows="2" placeholder="Con carpeta abierta, entran los 3 primeros TP" class="w-full bg-zinc-900 border border-zinc-700 rounded-3xl px-4 py-3.5 focus:outline-none focus:border-blue-500"></textarea>
             </div>
-            <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-3xl font-semibold transition-all active:scale-95">Agregar al calendario</button>
+            <div class="max-w-xs">
+              <label class="block text-sm text-zinc-400 mb-2">Nota obtenida (si ya la sabés)</label>
+              <input id="examen-nota" type="number" step="0.01" min="0" max="10" placeholder="7.50" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+            </div>
+            <div class="flex gap-3">
+              <button type="submit" id="btn-guardar-examen" class="flex-1 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-3xl font-semibold transition-all active:scale-95">Agregar al calendario</button>
+              <button type="button" id="btn-cancelar-examen" onclick="cancelarEdicionExamen()" class="hidden px-6 py-3.5 rounded-3xl font-medium bg-zinc-800 hover:bg-zinc-700 transition-colors">Cancelar</button>
+            </div>
           </form>
         </div>
 
@@ -390,6 +413,8 @@ let entradas = [];
 let examenes = [];
 let colorSeleccionado = 0;
 let entradaEditando = null;
+let materiaEditando = null;
+let examenEditando = null;
 let mesActual = new Date();
 let chartSemanal = null;
 
@@ -414,7 +439,20 @@ async function cargarTodo() {
   if (data.error) throw new Error(data.error);
   return data; // { materias, entradas, examenes }
 }
-async function guardarColeccion(key, data) {
+
+let colaPendiente = {}; // { key: data } - última versión pendiente de sincronizar por colección
+let reintentando = false;
+
+function actualizarEstadoSync() {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  const pendiente = Object.keys(colaPendiente).length > 0;
+  el.innerHTML = pendiente
+    ? `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span><span class="text-amber-400">Sincronizando...</span>`
+    : `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Sincronizado</span>`;
+}
+
+async function intentarGuardar(key, data) {
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -423,8 +461,45 @@ async function guardarColeccion(key, data) {
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
+    return true;
   } catch (e) {
-    mostrarToast('⚠️ No se pudo guardar en la nube. Revisá tu conexión.', 'error');
+    return false;
+  }
+}
+
+function iniciarReintentos() {
+  if (reintentando) return;
+  reintentando = true;
+  const intervalo = setInterval(async () => {
+    const claves = Object.keys(colaPendiente);
+    if (claves.length === 0) {
+      clearInterval(intervalo);
+      reintentando = false;
+      return;
+    }
+    for (const key of claves) {
+      const data = colaPendiente[key];
+      const exito = await intentarGuardar(key, data);
+      if (exito) {
+        delete colaPendiente[key];
+        actualizarEstadoSync();
+        mostrarToast(`✅ Sincronizado con la nube`);
+      }
+    }
+  }, 5000);
+}
+window.addEventListener('online', () => { if (Object.keys(colaPendiente).length) iniciarReintentos(); });
+
+async function guardarColeccion(key, data) {
+  const exito = await intentarGuardar(key, data);
+  if (!exito) {
+    colaPendiente[key] = data;
+    actualizarEstadoSync();
+    mostrarToast('⚠️ Sin conexión. Se guardó localmente y se va a sincronizar solo.', 'error');
+    iniciarReintentos();
+  } else if (colaPendiente[key]) {
+    delete colaPendiente[key];
+    actualizarEstadoSync();
   }
 }
 
@@ -519,6 +594,8 @@ function renderMaterias() {
     const c = colorDe(m);
     const horas = entradas.filter(e => e.materiaId === m.id).reduce((s,e) => s + (e.horas||0), 0);
     const nEx = examenes.filter(ex => ex.materiaId === m.id && !ex.rendido).length;
+    const notas = examenes.filter(ex => ex.materiaId === m.id && ex.nota !== null && ex.nota !== undefined && ex.nota !== '');
+    const promedio = notas.length ? (notas.reduce((s,ex) => s + parseFloat(ex.nota), 0) / notas.length) : null;
     return `
     <div class="glass border ${c.border} rounded-3xl p-6 card-hover">
       <div class="flex items-start justify-between mb-3">
@@ -526,11 +603,15 @@ function renderMaterias() {
           <span class="w-3.5 h-3.5 rounded-full ${c.dot}"></span>
           <h4 class="font-semibold text-lg">${escapeHtml(m.nombre)}</h4>
         </div>
-        <button onclick="borrarMateria('${m.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
+        <div class="flex items-center gap-3">
+          <button onclick="editarMateria('${m.id}')" class="text-zinc-500 hover:text-blue-400 transition-colors"><i class="fas fa-pen text-sm"></i></button>
+          <button onclick="borrarMateria('${m.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
+        </div>
       </div>
-      <div class="flex gap-5 text-sm text-zinc-400">
+      <div class="flex gap-5 text-sm text-zinc-400 flex-wrap">
         <span><i class="fas fa-clock mr-1.5"></i>${horas}h estudiadas</span>
         ${nEx > 0 ? `<span class="${c.text}"><i class="fas fa-graduation-cap mr-1.5"></i>${nEx} examen${nEx>1?'es':''} pendiente${nEx>1?'s':''}</span>` : ''}
+        ${promedio !== null ? `<span class="text-emerald-400"><i class="fas fa-star mr-1.5"></i>Promedio: ${promedio.toFixed(2)}</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -541,15 +622,44 @@ document.getElementById('form-materia').addEventListener('submit', async e => {
   e.preventDefault();
   const nombre = document.getElementById('materia-nombre').value.trim();
   if (!nombre) return;
-  materias.push({ id: uid(), nombre, colorIdx: colorSeleccionado });
+  const editId = document.getElementById('materia-edit-id').value;
+  if (editId) {
+    const idx = materias.findIndex(m => m.id === editId);
+    materias[idx] = { ...materias[idx], nombre, colorIdx: colorSeleccionado };
+    mostrarToast('✅ Materia actualizada');
+  } else {
+    materias.push({ id: uid(), nombre, colorIdx: colorSeleccionado });
+    colorSeleccionado = (colorSeleccionado + 1) % PALETTE.length;
+    mostrarToast('✅ Materia agregada');
+  }
   await guardarColeccion('materias', materias);
-  e.target.reset();
-  colorSeleccionado = (colorSeleccionado + 1) % PALETTE.length;
+  cancelarEdicionMateria();
   renderColorPicker();
-  renderMaterias();
   renderTodo();
-  mostrarToast('✅ Materia agregada');
 });
+
+function editarMateria(id) {
+  const m = materiaPorId(id);
+  if (!m) return;
+  materiaEditando = id;
+  document.getElementById('materia-edit-id').value = id;
+  document.getElementById('materia-nombre').value = m.nombre;
+  colorSeleccionado = m.colorIdx;
+  renderColorPicker();
+  document.getElementById('form-materia-titulo').textContent = '✏️ Editando materia';
+  document.getElementById('btn-guardar-materia').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-materia').classList.remove('hidden');
+  cambiarTab(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function cancelarEdicionMateria() {
+  materiaEditando = null;
+  document.getElementById('form-materia').reset();
+  document.getElementById('materia-edit-id').value = '';
+  document.getElementById('form-materia-titulo').textContent = '➕ Nueva materia';
+  document.getElementById('btn-guardar-materia').textContent = 'Agregar';
+  document.getElementById('btn-cancelar-materia').classList.add('hidden');
+}
 
 async function borrarMateria(id) {
   const materia = materiaPorId(id);
@@ -738,30 +848,65 @@ function cardExamen(ex, activo) {
         <button onclick="toggleRendido('${ex.id}')" class="text-zinc-500 hover:${activo ? 'text-emerald-400' : 'text-zinc-300'} transition-colors" title="${activo ? 'Marcar como rendido' : 'Marcar como pendiente'}">
           <i class="fas ${activo ? 'fa-check-circle' : 'fa-rotate-left'} text-sm"></i>
         </button>
+        <button onclick="editarExamen('${ex.id}')" class="text-zinc-500 hover:text-blue-400 transition-colors"><i class="fas fa-pen text-sm"></i></button>
         <button onclick="borrarExamen('${ex.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
       </div>
     </div>
     <p class="text-sm text-zinc-400 mb-1">${fmtFechaCorta(ex.fecha)}</p>
     ${ex.tema ? `<p class="font-medium">${escapeHtml(ex.tema)}</p>` : ''}
     ${ex.notas ? `<p class="text-zinc-400 text-sm mt-2 italic">"${escapeHtml(ex.notas)}"</p>` : ''}
+    ${(ex.nota !== null && ex.nota !== undefined && ex.nota !== '') ? `<p class="mt-2"><span class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-star mr-1"></i>Nota: ${ex.nota}</span></p>` : ''}
   </div>`;
 }
 
 document.getElementById('form-examen').addEventListener('submit', async e => {
   e.preventDefault();
-  examenes.push({
-    id: uid(),
+  const notaVal = document.getElementById('examen-nota').value;
+  const data = {
     materiaId: document.getElementById('examen-materia').value,
     fecha: document.getElementById('examen-fecha').value,
     tema: document.getElementById('examen-tema').value.trim(),
     notas: document.getElementById('examen-notas').value.trim(),
-    rendido: false,
-  });
+    nota: notaVal !== '' ? parseFloat(notaVal) : null,
+  };
+  const editId = document.getElementById('examen-edit-id').value;
+  if (editId) {
+    const idx = examenes.findIndex(ex => ex.id === editId);
+    examenes[idx] = { ...examenes[idx], ...data };
+    mostrarToast('✅ Examen actualizado');
+  } else {
+    examenes.push({ id: uid(), rendido: false, ...data });
+    mostrarToast('📌 Examen agregado al calendario');
+  }
   await guardarColeccion('examenes', examenes);
-  e.target.reset();
+  cancelarEdicionExamen();
   renderTodo();
-  mostrarToast('📌 Examen agregado al calendario');
 });
+
+function editarExamen(id) {
+  const ex = examenes.find(e => e.id === id);
+  if (!ex) return;
+  examenEditando = id;
+  document.getElementById('examen-edit-id').value = id;
+  document.getElementById('examen-materia').value = ex.materiaId;
+  document.getElementById('examen-fecha').value = ex.fecha;
+  document.getElementById('examen-tema').value = ex.tema || '';
+  document.getElementById('examen-notas').value = ex.notas || '';
+  document.getElementById('examen-nota').value = (ex.nota !== null && ex.nota !== undefined) ? ex.nota : '';
+  document.getElementById('form-examen-titulo').textContent = '✏️ Editando examen';
+  document.getElementById('btn-guardar-examen').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-examen').classList.remove('hidden');
+  cambiarTab(2);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function cancelarEdicionExamen() {
+  examenEditando = null;
+  document.getElementById('form-examen').reset();
+  document.getElementById('examen-edit-id').value = '';
+  document.getElementById('form-examen-titulo').textContent = '📌 Nuevo examen / entrega';
+  document.getElementById('btn-guardar-examen').textContent = 'Agregar al calendario';
+  document.getElementById('btn-cancelar-examen').classList.add('hidden');
+}
 
 async function toggleRendido(id) {
   const ex = examenes.find(e => e.id === id);
@@ -1076,6 +1221,92 @@ function renderPomodoroHistorialHoy() {
       </div>`;
     }).join('');
 }
+
+/* ---------- Búsqueda global ---------- */
+function coincide(texto, query) {
+  return (texto || '').toLowerCase().includes(query);
+}
+function buscarGlobal(query) {
+  const cont = document.getElementById('busqueda-resultados');
+  query = query.trim().toLowerCase();
+  if (query.length < 2) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
+
+  const resEntradas = entradas.filter(e => {
+    const m = materiaPorId(e.materiaId);
+    return coincide(e.tema, query) || coincide(e.videos, query) || coincide(e.tareas, query) || coincide(e.notas, query)
+      || coincide(m && m.nombre, query) || coincide(fmtFechaCorta(e.fecha), query);
+  }).slice(0, 8);
+
+  const resExamenes = examenes.filter(ex => {
+    const m = materiaPorId(ex.materiaId);
+    return coincide(ex.tema, query) || coincide(ex.notas, query) || coincide(m && m.nombre, query) || coincide(fmtFechaCorta(ex.fecha), query);
+  }).slice(0, 8);
+
+  const resMaterias = materias.filter(m => coincide(m.nombre, query)).slice(0, 5);
+
+  if (resEntradas.length + resExamenes.length + resMaterias.length === 0) {
+    cont.innerHTML = `<div class="p-5 text-sm text-zinc-500 text-center">Sin resultados para "${escapeHtml(query)}"</div>`;
+    cont.classList.remove('hidden');
+    return;
+  }
+
+  let html = '';
+  if (resMaterias.length) {
+    html += `<div class="px-4 pt-3 pb-1 text-xs text-zinc-500 uppercase tracking-wide">Materias</div>`;
+    html += resMaterias.map(m => {
+      const c = colorDe(m);
+      return `<button onclick="irAResultado(1)" class="w-full text-left px-4 py-2.5 hover:bg-zinc-800 transition-colors flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full ${c.dot}"></span><span class="text-sm">${escapeHtml(m.nombre)}</span>
+      </button>`;
+    }).join('');
+  }
+  if (resEntradas.length) {
+    html += `<div class="px-4 pt-3 pb-1 text-xs text-zinc-500 uppercase tracking-wide">Entradas del diario</div>`;
+    html += resEntradas.map(e => {
+      const m = materiaPorId(e.materiaId);
+      const c = colorDe(m);
+      return `<button onclick="irAResultado(0, '${e.materiaId}')" class="w-full text-left px-4 py-2.5 hover:bg-zinc-800 transition-colors">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="w-2 h-2 rounded-full ${c.dot}"></span>
+          <span class="text-xs ${c.text}">${m ? escapeHtml(m.nombre) : ''}</span>
+          <span class="text-xs text-zinc-500">· ${fmtFechaCorta(e.fecha)}</span>
+        </div>
+        <p class="text-sm truncate">${escapeHtml(e.tema) || 'Sin descripción'}</p>
+      </button>`;
+    }).join('');
+  }
+  if (resExamenes.length) {
+    html += `<div class="px-4 pt-3 pb-1 text-xs text-zinc-500 uppercase tracking-wide">Exámenes</div>`;
+    html += resExamenes.map(ex => {
+      const m = materiaPorId(ex.materiaId);
+      const c = colorDe(m);
+      return `<button onclick="irAResultado(2)" class="w-full text-left px-4 py-2.5 hover:bg-zinc-800 transition-colors">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="w-2 h-2 rounded-full ${c.dot}"></span>
+          <span class="text-xs ${c.text}">${m ? escapeHtml(m.nombre) : ''}</span>
+          <span class="text-xs text-zinc-500">· ${fmtFechaCorta(ex.fecha)}</span>
+        </div>
+        <p class="text-sm truncate">${escapeHtml(ex.tema) || 'Sin tema'}</p>
+      </button>`;
+    }).join('');
+  }
+  cont.innerHTML = html;
+  cont.classList.remove('hidden');
+}
+function irAResultado(tab, filtroMateria) {
+  document.getElementById('busqueda-resultados').classList.add('hidden');
+  document.getElementById('busqueda-global').value = '';
+  cambiarTab(tab);
+  if (tab === 0 && filtroMateria) {
+    document.getElementById('filtro-materia-diario').value = filtroMateria;
+    renderDiario();
+  }
+}
+document.getElementById('busqueda-global').addEventListener('input', e => buscarGlobal(e.target.value));
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('busqueda-global').parentElement;
+  if (!wrap.contains(e.target)) document.getElementById('busqueda-resultados').classList.add('hidden');
+});
 
 /* ---------- Tabs ---------- */
 function cambiarTab(n) {

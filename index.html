@@ -2,8 +2,19 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>✦ Agenda de Facultad</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#09090b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Agenda">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
@@ -21,6 +32,11 @@
   @keyframes slideIn { from { opacity:0; transform: translateY(10px);} to {opacity:1; transform:translateY(0);} }
   .anim-in { animation: slideIn .25s ease-out; }
   input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; }
+  .nav-mobile { padding-bottom: env(safe-area-inset-bottom); }
+  .tab-btn-mobile.activo { color: #10b981; }
+  @media (display-mode: standalone) {
+    .solo-navegador { display: none !important; }
+  }
 </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200 min-h-screen">
@@ -31,8 +47,8 @@
 </div>
 
 <div class="flex h-screen">
-  <!-- Sidebar -->
-  <div class="w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col shrink-0">
+  <!-- Sidebar (solo desktop/tablet) -->
+  <div class="hidden md:flex w-72 bg-zinc-900 border-r border-zinc-800 flex-col shrink-0">
     <div class="p-7 border-b border-zinc-800">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-2xl flex items-center justify-center text-xl">🎓</div>
@@ -44,27 +60,24 @@
     </div>
 
     <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
-      <button onclick="cambiarTab(0)" id="tab-0" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(0)" id="tab-0" data-tab="0" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-calendar-day w-4 text-center"></i><span class="font-medium text-sm">Diario</span>
       </button>
-      <button onclick="cambiarTab(5)" id="tab-5" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(5)" id="tab-5" data-tab="5" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-stopwatch w-4 text-center"></i><span class="font-medium text-sm">Pomodoro</span>
       </button>
-      <button onclick="cambiarTab(1)" id="tab-1" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(1)" id="tab-1" data-tab="1" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-book w-4 text-center"></i><span class="font-medium text-sm">Materias</span>
       </button>
-      <button onclick="cambiarTab(2)" id="tab-2" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(2)" id="tab-2" data-tab="2" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-graduation-cap w-4 text-center"></i><span class="font-medium text-sm">Exámenes</span>
         <span id="badge-examenes" class="ml-auto hidden bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
       </button>
-      <button onclick="cambiarTab(3)" id="tab-3" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(3)" id="tab-3" data-tab="3" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-calendar-week w-4 text-center"></i><span class="font-medium text-sm">Semanal</span>
       </button>
-      <button onclick="cambiarTab(4)" id="tab-4" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+      <button onclick="cambiarTab(4)" id="tab-4" data-tab="4" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-chart-bar w-4 text-center"></i><span class="font-medium text-sm">Mensual</span>
-      </button>
-      <button onclick="cambiarTab(6)" id="tab-6" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
-        <i class="fas fa-magnifying-glass w-4 text-center"></i><span class="font-medium text-sm">Buscar</span>
       </button>
     </nav>
 
@@ -86,23 +99,26 @@
   </div>
 
   <!-- Main -->
-  <div class="flex-1 overflow-auto">
+  <div class="flex-1 overflow-auto pb-20 md:pb-0">
     <header class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-10">
-      <div class="max-w-5xl mx-auto px-10 py-6 flex items-center justify-between gap-6">
-        <div id="header-title" class="text-2xl font-bold tracking-tight whitespace-nowrap">Diario de hoy</div>
+      <div class="max-w-5xl mx-auto px-4 md:px-10 py-4 md:py-6 flex items-center justify-between gap-3 md:gap-6">
+        <div class="flex items-center gap-2.5 md:hidden">
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-xl flex items-center justify-center text-sm shrink-0">🎓</div>
+        </div>
+        <div id="header-title" class="text-lg md:text-2xl font-bold tracking-tight whitespace-nowrap hidden md:block">Diario de hoy</div>
         <div class="relative flex-1 max-w-sm">
           <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm"></i>
-          <input id="busqueda-global" type="text" placeholder="Buscar en toda la agenda..." autocomplete="off"
+          <input id="busqueda-global" type="text" placeholder="Buscar..." autocomplete="off"
             class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500">
           <div id="busqueda-resultados" class="hidden absolute top-full mt-2 left-0 right-0 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl max-h-96 overflow-y-auto z-20"></div>
         </div>
-        <div class="flex items-center gap-6 shrink-0">
+        <div class="hidden md:flex items-center gap-6 shrink-0">
           <div id="fecha-hoy" class="text-zinc-400 text-sm"></div>
         </div>
       </div>
     </header>
 
-    <div class="max-w-5xl mx-auto px-10 py-8">
+    <div class="max-w-5xl mx-auto px-4 md:px-10 py-5 md:py-8">
 
       <!-- PANEL DIARIO -->
       <div id="panel-0">
@@ -444,7 +460,30 @@
   </div>
 </div>
 
-<div id="toast-container" class="fixed bottom-6 right-6 flex flex-col gap-3 z-50"></div>
+<!-- Navegación inferior (solo mobile) -->
+<nav class="nav-mobile md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 flex z-30">
+  <button onclick="cambiarTab(0)" data-tab="0" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-calendar-day text-base"></i><span class="text-[10px] font-medium">Diario</span>
+  </button>
+  <button onclick="cambiarTab(5)" data-tab="5" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-stopwatch text-base"></i><span class="text-[10px] font-medium">Pomodoro</span>
+  </button>
+  <button onclick="cambiarTab(1)" data-tab="1" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-book text-base"></i><span class="text-[10px] font-medium">Materias</span>
+  </button>
+  <button onclick="cambiarTab(2)" data-tab="2" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors relative">
+    <i class="fas fa-graduation-cap text-base"></i><span class="text-[10px] font-medium">Exámenes</span>
+    <span id="badge-examenes-mobile" class="hidden absolute top-1 right-1/4 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full items-center justify-center"></span>
+  </button>
+  <button onclick="cambiarTab(3)" data-tab="3" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-calendar-week text-base"></i><span class="text-[10px] font-medium">Semanal</span>
+  </button>
+  <button onclick="cambiarTab(4)" data-tab="4" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-chart-bar text-base"></i><span class="text-[10px] font-medium">Mensual</span>
+  </button>
+</nav>
+
+<div id="toast-container" class="fixed bottom-20 right-4 md:bottom-6 md:right-6 flex flex-col gap-3 z-50 left-4 md:left-auto"></div>
 
 <script>
 /* ---------- Paleta de colores para materias ---------- */
@@ -902,10 +941,17 @@ function renderExamenes() {
     ? `<p class="text-zinc-600 text-sm">Todavía no rendiste ningún examen cargado acá.</p>`
     : pasados.map(ex => cardExamen(ex, false)).join('');
 
-  // Badge urgente en sidebar
+  // Badge urgente en sidebar y en la nav mobile
   const urgentes = proximos.filter(ex => diasEntre(ex.fecha) <= 3).length;
   const badge = document.getElementById('badge-examenes');
-  if (urgentes > 0) { badge.textContent = urgentes; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+  const badgeM = document.getElementById('badge-examenes-mobile');
+  if (urgentes > 0) {
+    badge.textContent = urgentes; badge.classList.remove('hidden');
+    badgeM.textContent = urgentes; badgeM.classList.remove('hidden'); badgeM.classList.add('flex');
+  } else {
+    badge.classList.add('hidden');
+    badgeM.classList.add('hidden'); badgeM.classList.remove('flex');
+  }
 
   // Mini próximo examen en sidebar
   const mini = document.getElementById('proximo-examen-mini');
@@ -1486,7 +1532,8 @@ function cambiarTab(n) {
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.classList.add('hidden'));
   document.getElementById(`panel-${n}`).classList.remove('hidden');
   document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('tab-active'));
-  document.getElementById(`tab-${n}`).classList.add('tab-active');
+  document.querySelectorAll('.tab-btn-mobile').forEach(t => t.classList.remove('activo'));
+  document.querySelectorAll(`[data-tab="${n}"]`).forEach(t => t.classList.add(t.classList.contains('tab-btn-mobile') ? 'activo' : 'tab-active'));
   const titulos = { 0:'Diario de hoy', 1:'Mis materias', 2:'Exámenes y entregas', 3:'Resumen semanal', 4:'Vista mensual', 5:'Pomodoro' };
   document.getElementById('header-title').textContent = titulos[n];
   if (n === 3) renderSemanal();
@@ -1542,6 +1589,13 @@ async function init() {
   }
 }
 init();
+
+/* ---------- PWA: registro del service worker ---------- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* si falla, la app sigue funcionando igual como web normal */ });
+  });
+}
 </script>
 </body>
 </html>

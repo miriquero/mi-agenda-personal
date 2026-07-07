@@ -176,19 +176,72 @@
       <div id="panel-1" class="hidden">
         <div class="glass border border-zinc-700 rounded-3xl p-8 mb-8">
           <h2 id="form-materia-titulo" class="text-xl font-semibold mb-6">➕ Nueva materia</h2>
-          <form id="form-materia" class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+          <form id="form-materia" class="space-y-5">
             <input type="hidden" id="materia-edit-id">
-            <div class="flex-1 w-full">
-              <label class="block text-sm text-zinc-400 mb-2">Nombre de la materia</label>
-              <input id="materia-nombre" type="text" placeholder="Análisis Matemático II" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Nombre de la materia</label>
+                <input id="materia-nombre" type="text" placeholder="Análisis Matemático II" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500" required>
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Estado académico</label>
+                <select id="materia-estado" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+                  <option value="cursando">Cursando</option>
+                  <option value="regular">Regular (debe rendir final)</option>
+                  <option value="libre">Libre</option>
+                  <option value="recursando">Recursando</option>
+                  <option value="promocionada">Promocionada</option>
+                  <option value="aprobada">Aprobada</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm text-zinc-400 mb-2">Color</label>
-              <div id="color-picker" class="flex gap-2"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Nota final (si ya está aprobada/promocionada)</label>
+                <input id="materia-nota-final" type="number" step="0.01" min="0" max="10" placeholder="8" class="w-full bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm text-zinc-400 mb-2">Color</label>
+                <div id="color-picker" class="flex gap-2"></div>
+              </div>
             </div>
-            <button type="submit" id="btn-guardar-materia" class="bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 px-6 py-3.5 rounded-2xl font-semibold transition-all active:scale-95 whitespace-nowrap">Agregar</button>
-            <button type="button" id="btn-cancelar-materia" onclick="cancelarEdicionMateria()" class="hidden px-6 py-3.5 rounded-2xl font-medium bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap">Cancelar</button>
+            <div class="flex gap-3">
+              <button type="submit" id="btn-guardar-materia" class="flex-1 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 py-3.5 rounded-2xl font-semibold transition-all active:scale-95">Agregar</button>
+              <button type="button" id="btn-cancelar-materia" onclick="cancelarEdicionMateria()" class="hidden px-6 py-3.5 rounded-2xl font-medium bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap">Cancelar</button>
+            </div>
           </form>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="glass border border-zinc-700 rounded-2xl p-4">
+            <p class="text-xs text-zinc-500 mb-1">Cursando</p>
+            <p id="resumen-cursando" class="text-xl font-bold text-blue-400">0</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-2xl p-4">
+            <p class="text-xs text-zinc-500 mb-1">Regulares</p>
+            <p id="resumen-regular" class="text-xl font-bold text-cyan-400">0</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-2xl p-4">
+            <p class="text-xs text-zinc-500 mb-1">Aprobadas</p>
+            <p id="resumen-aprobadas" class="text-xl font-bold text-emerald-400">0</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-2xl p-4">
+            <p class="text-xs text-zinc-500 mb-1">Promedio general</p>
+            <p id="resumen-promedio" class="text-xl font-bold">—</p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="text-lg font-semibold">Mis materias</h3>
+          <select id="filtro-estado-materia" class="bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500">
+            <option value="todas">Todos los estados</option>
+            <option value="cursando">Cursando</option>
+            <option value="regular">Regular</option>
+            <option value="libre">Libre</option>
+            <option value="recursando">Recursando</option>
+            <option value="promocionada">Promocionada</option>
+            <option value="aprobada">Aprobada</option>
+          </select>
         </div>
         <div id="lista-materias" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
       </div>
@@ -406,6 +459,19 @@ const PALETTE = [
   { nombre:'Rojo',     dot:'bg-red-500',     soft:'bg-red-500/10',     text:'text-red-400',     border:'border-red-500/40',     hex:'#ef4444' },
 ];
 
+/* ---------- Estados académicos de una materia ---------- */
+const ESTADOS = {
+  cursando:     { label: 'Cursando',     badge: 'bg-blue-500/10 text-blue-400' },
+  regular:      { label: 'Regular',      badge: 'bg-cyan-500/10 text-cyan-400' },
+  libre:        { label: 'Libre',        badge: 'bg-red-500/10 text-red-400' },
+  recursando:   { label: 'Recursando',   badge: 'bg-amber-500/10 text-amber-400' },
+  promocionada: { label: 'Promocionada', badge: 'bg-emerald-500/10 text-emerald-400' },
+  aprobada:     { label: 'Aprobada',     badge: 'bg-green-500/10 text-green-400' },
+};
+function estadoDe(materia) {
+  return ESTADOS[(materia && materia.estado) || 'cursando'];
+}
+
 /* ---------- Configuración de la API (Google Apps Script) ---------- */
 // 1. Pegá acá la URL que te da Apps Script al hacer "Deploy > Web app" (termina en /exec)
 // 2. Pegá el mismo TOKEN que pusiste en Code.gs
@@ -589,18 +655,40 @@ function renderSelectMaterias() {
 
 function renderMaterias() {
   const cont = document.getElementById('lista-materias');
+  const filtro = document.getElementById('filtro-estado-materia').value;
+
+  // Resumen general (sobre todas las materias, sin filtrar)
+  const conteo = { cursando:0, regular:0, libre:0, recursando:0, promocionada:0, aprobada:0 };
+  materias.forEach(m => { conteo[m.estado || 'cursando']++; });
+  document.getElementById('resumen-cursando').textContent = conteo.cursando + conteo.recursando;
+  document.getElementById('resumen-regular').textContent = conteo.regular;
+  document.getElementById('resumen-aprobadas').textContent = conteo.aprobada + conteo.promocionada;
+  const conNotaFinal = materias.filter(m => m.notaFinal !== null && m.notaFinal !== undefined && m.notaFinal !== '');
+  const promedioGeneral = conNotaFinal.length ? (conNotaFinal.reduce((s,m) => s + parseFloat(m.notaFinal), 0) / conNotaFinal.length) : null;
+  document.getElementById('resumen-promedio').textContent = promedioGeneral !== null ? promedioGeneral.toFixed(2) : '—';
+
+  const listaFiltrada = filtro === 'todas' ? materias : materias.filter(m => (m.estado || 'cursando') === filtro);
+
   if (materias.length === 0) {
     cont.innerHTML = `<div class="md:col-span-2 glass border border-zinc-700 rounded-3xl p-12 text-center">
       <p class="text-5xl mb-4">📚</p><p class="text-zinc-400">Todavía no cargaste materias.</p></div>`;
     renderSelectMaterias();
     return;
   }
-  cont.innerHTML = materias.map(m => {
+  if (listaFiltrada.length === 0) {
+    cont.innerHTML = `<div class="md:col-span-2 glass border border-zinc-700 rounded-3xl p-10 text-center">
+      <p class="text-zinc-500 text-sm">No hay materias en ese estado.</p></div>`;
+    renderSelectMaterias();
+    return;
+  }
+  cont.innerHTML = listaFiltrada.map(m => {
     const c = colorDe(m);
+    const est = estadoDe(m);
     const horas = entradas.filter(e => e.materiaId === m.id).reduce((s,e) => s + (e.horas||0), 0);
     const nEx = examenes.filter(ex => ex.materiaId === m.id && !ex.rendido).length;
     const notas = examenes.filter(ex => ex.materiaId === m.id && ex.nota !== null && ex.nota !== undefined && ex.nota !== '');
     const promedio = notas.length ? (notas.reduce((s,ex) => s + parseFloat(ex.nota), 0) / notas.length) : null;
+    const tieneNotaFinal = m.notaFinal !== null && m.notaFinal !== undefined && m.notaFinal !== '';
     return `
     <div class="glass border ${c.border} rounded-3xl p-6 card-hover">
       <div class="flex items-start justify-between mb-3">
@@ -613,27 +701,35 @@ function renderMaterias() {
           <button onclick="borrarMateria('${m.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
         </div>
       </div>
+      <div class="mb-3">
+        <span class="${est.badge} px-3 py-1 rounded-full text-xs font-semibold">${est.label}</span>
+        ${tieneNotaFinal ? `<span class="ml-2 bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-star text-amber-400 mr-1"></i>Nota final: ${m.notaFinal}</span>` : ''}
+      </div>
       <div class="flex gap-5 text-sm text-zinc-400 flex-wrap">
         <span><i class="fas fa-clock mr-1.5"></i>${horas}h estudiadas</span>
         ${nEx > 0 ? `<span class="${c.text}"><i class="fas fa-graduation-cap mr-1.5"></i>${nEx} examen${nEx>1?'es':''} pendiente${nEx>1?'s':''}</span>` : ''}
-        ${promedio !== null ? `<span class="text-emerald-400"><i class="fas fa-star mr-1.5"></i>Promedio: ${promedio.toFixed(2)}</span>` : ''}
+        ${promedio !== null ? `<span class="text-emerald-400"><i class="fas fa-star mr-1.5"></i>Promedio parciales: ${promedio.toFixed(2)}</span>` : ''}
       </div>
     </div>`;
   }).join('');
   renderSelectMaterias();
 }
+document.getElementById('filtro-estado-materia').addEventListener('change', renderMaterias);
 
 document.getElementById('form-materia').addEventListener('submit', async e => {
   e.preventDefault();
   const nombre = document.getElementById('materia-nombre').value.trim();
   if (!nombre) return;
+  const estado = document.getElementById('materia-estado').value;
+  const notaFinalVal = document.getElementById('materia-nota-final').value;
+  const notaFinal = notaFinalVal !== '' ? parseFloat(notaFinalVal) : null;
   const editId = document.getElementById('materia-edit-id').value;
   if (editId) {
     const idx = materias.findIndex(m => m.id === editId);
-    materias[idx] = { ...materias[idx], nombre, colorIdx: colorSeleccionado };
+    materias[idx] = { ...materias[idx], nombre, colorIdx: colorSeleccionado, estado, notaFinal };
     mostrarToast('✅ Materia actualizada');
   } else {
-    materias.push({ id: uid(), nombre, colorIdx: colorSeleccionado });
+    materias.push({ id: uid(), nombre, colorIdx: colorSeleccionado, estado, notaFinal });
     colorSeleccionado = (colorSeleccionado + 1) % PALETTE.length;
     mostrarToast('✅ Materia agregada');
   }
@@ -649,6 +745,8 @@ function editarMateria(id) {
   materiaEditando = id;
   document.getElementById('materia-edit-id').value = id;
   document.getElementById('materia-nombre').value = m.nombre;
+  document.getElementById('materia-estado').value = m.estado || 'cursando';
+  document.getElementById('materia-nota-final').value = (m.notaFinal !== null && m.notaFinal !== undefined) ? m.notaFinal : '';
   colorSeleccionado = m.colorIdx;
   renderColorPicker();
   document.getElementById('form-materia-titulo').textContent = '✏️ Editando materia';

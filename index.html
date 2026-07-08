@@ -353,6 +353,7 @@
         <div class="glass border border-zinc-700 rounded-3xl p-7 mb-8">
           <h3 class="text-lg font-semibold mb-5">Horas por día (últimos 7 días)</h3>
           <canvas id="chart-semanal" height="90"></canvas>
+          <div id="semana-vacio" class="hidden flex-col items-center justify-center text-center py-6"></div>
         </div>
         <div class="glass border border-zinc-700 rounded-3xl p-7">
           <h3 class="text-lg font-semibold mb-5">Distribución por materia esta semana</h3>
@@ -439,6 +440,7 @@
               <button id="pomo-btn-pausar" onclick="pomodoroPausar()" class="hidden bg-zinc-800 hover:bg-zinc-700 px-8 py-3.5 rounded-3xl font-semibold transition-colors">Pausar</button>
               <button onclick="pomodoroSaltar()" class="bg-zinc-800 hover:bg-zinc-700 px-6 py-3.5 rounded-3xl font-medium transition-colors" title="Saltar a la siguiente fase sin registrar"><i class="fas fa-forward"></i></button>
               <button onclick="pomodoroReiniciar()" class="bg-zinc-800 hover:bg-zinc-700 px-6 py-3.5 rounded-3xl font-medium transition-colors" title="Reiniciar"><i class="fas fa-rotate-left"></i></button>
+              <button id="pomo-btn-pip" onclick="abrirPomodoroPiP()" class="hidden bg-zinc-800 hover:bg-zinc-700 px-6 py-3.5 rounded-3xl font-medium transition-colors" title="Flotar sobre otras ventanas (Picture-in-Picture)"><i class="fas fa-clone"></i></button>
             </div>
 
             <div class="w-full mt-8 pt-6 border-t border-zinc-800">
@@ -649,6 +651,15 @@ async function guardarColeccion(key, data) {
 
 /* ---------- Utilidades ---------- */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function formatearDuracion(horasDecimal) {
+  const totalMin = Math.round((horasDecimal || 0) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0 && m === 0) return '0min';
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -779,7 +790,7 @@ function renderMaterias() {
         ${tieneNotaFinal ? `<span class="ml-2 bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs font-semibold"><i class="fas fa-star text-amber-400 mr-1"></i>Nota final: ${m.notaFinal}</span>` : ''}
       </div>
       <div class="flex gap-5 text-sm text-zinc-400 flex-wrap">
-        <span><i class="fas fa-clock mr-1.5"></i>${horas}h estudiadas</span>
+        <span><i class="fas fa-clock mr-1.5"></i>${formatearDuracion(horas)} estudiadas</span>
         ${nEx > 0 ? `<span class="${c.text}"><i class="fas fa-graduation-cap mr-1.5"></i>${nEx} examen${nEx>1?'es':''} pendiente${nEx>1?'s':''}</span>` : ''}
         ${promedio !== null ? `<span class="text-emerald-400"><i class="fas fa-star mr-1.5"></i>Promedio parciales: ${promedio.toFixed(2)}</span>` : ''}
       </div>
@@ -879,7 +890,7 @@ function renderDiario() {
           ${entry.origen === 'pomodoro' ? `<span title="Registrado con Pomodoro">🍅</span>` : ''}
         </div>
         <div class="flex items-center gap-3">
-          <span class="bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs">${entry.horas ? entry.horas + 'h' : '—'}</span>
+          <span class="bg-zinc-800 text-zinc-300 px-3 py-1 rounded-full text-xs">${entry.horas ? formatearDuracion(entry.horas) : '—'}</span>
           <button onclick="editarEntrada('${entry.id}')" class="text-zinc-500 hover:text-blue-400 transition-colors"><i class="fas fa-pen text-sm"></i></button>
           <button onclick="borrarEntrada('${entry.id}')" class="text-zinc-500 hover:text-red-400 transition-colors"><i class="fas fa-trash-alt text-sm"></i></button>
         </div>
@@ -1127,7 +1138,7 @@ function renderStatsGlobales() {
   document.getElementById('stats-total').textContent = `${entradas.length} entrada${entradas.length !== 1 ? 's' : ''}`;
   document.getElementById('stats-racha').textContent = `🔥 ${calcularRacha()} días`;
   const totalHoras = entradas.reduce((s,e) => s + (e.horas||0), 0);
-  document.getElementById('stats-horas').textContent = `${totalHoras}h totales`;
+  document.getElementById('stats-horas').textContent = `${formatearDuracion(totalHoras)} totales`;
 }
 
 /* ---------- Semanal ---------- */
@@ -1142,9 +1153,9 @@ function renderSemanal() {
   const totalSemana = horasPorDia.reduce((a,b) => a+b, 0);
   const diasActivos = horasPorDia.filter(h => h > 0).length;
 
-  document.getElementById('semana-horas-total').textContent = `${totalSemana}h`;
+  document.getElementById('semana-horas-total').textContent = formatearDuracion(totalSemana);
   document.getElementById('semana-dias-activos').textContent = `${diasActivos} / 7`;
-  document.getElementById('semana-promedio').textContent = `${(totalSemana/7).toFixed(1)}h`;
+  document.getElementById('semana-promedio').textContent = formatearDuracion(totalSemana/7);
 
   const porMateria = {};
   entradas.filter(e => dias.includes(e.fecha)).forEach(e => {
@@ -1155,34 +1166,66 @@ function renderSemanal() {
   document.getElementById('semana-top-materia').textContent = topMateria ? topMateria.nombre : '—';
 
   const labels = dias.map(iso => { const [,,d] = iso.split('-'); return new Date(iso+'T00:00:00').toLocaleDateString('es-AR', { weekday:'short' }); });
-  const ctx = document.getElementById('chart-semanal').getContext('2d');
-  if (chartSemanal) chartSemanal.destroy();
-  chartSemanal = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 8, maxBarThickness: 40 }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
-        x: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+  const canvasEl = document.getElementById('chart-semanal');
+  const vacioEl = document.getElementById('semana-vacio');
+
+  if (totalSemana === 0) {
+    if (chartSemanal) { chartSemanal.destroy(); chartSemanal = null; }
+    canvasEl.classList.add('hidden');
+    vacioEl.classList.remove('hidden');
+    vacioEl.classList.add('flex');
+    vacioEl.innerHTML = `
+      <svg width="120" height="90" viewBox="0 0 120 90" fill="none" class="mb-4 opacity-70">
+        <rect x="10" y="55" width="16" height="25" rx="4" fill="#27272a"/>
+        <rect x="36" y="40" width="16" height="40" rx="4" fill="#3f3f46"/>
+        <rect x="62" y="20" width="16" height="60" rx="4" fill="#10b981" fill-opacity="0.35"/>
+        <rect x="88" y="35" width="16" height="45" rx="4" fill="#3f3f46"/>
+        <circle cx="70" cy="14" r="9" fill="#10b981" fill-opacity="0.6"/>
+        <path d="M66 14l3 3 5-6" stroke="#09090b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="text-zinc-400 text-sm mb-1">Todavía no cargaste horas esta semana</p>
+      <p class="text-zinc-600 text-xs mb-4">Arrancá un Pomodoro o cargá una entrada en el Diario</p>
+      <button onclick="cambiarTab(5)" class="bg-zinc-800 hover:bg-zinc-700 px-5 py-2 rounded-2xl text-sm font-medium transition-colors">Ir al Pomodoro</button>
+    `;
+  } else {
+    canvasEl.classList.remove('hidden');
+    vacioEl.classList.add('hidden');
+    vacioEl.classList.remove('flex');
+    const ctx = canvasEl.getContext('2d');
+    if (chartSemanal) chartSemanal.destroy();
+    chartSemanal = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 8, maxBarThickness: 40 }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
+          x: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+        }
       }
-    }
-  });
+    });
+  }
 
   const distCont = document.getElementById('semana-distribucion');
   const entries = Object.entries(porMateria).sort((a,b) => b[1]-a[1]);
   distCont.innerHTML = entries.length === 0
-    ? `<p class="text-zinc-600 text-sm">Sin registros esta semana.</p>`
+    ? `<div class="flex flex-col items-center text-center py-6">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" class="mb-3 opacity-70">
+          <circle cx="40" cy="40" r="30" stroke="#3f3f46" stroke-width="8" fill="none"/>
+          <path d="M40 10 A30 30 0 0 1 68 45" stroke="#10b981" stroke-width="8" fill="none" stroke-linecap="round" stroke-opacity="0.5"/>
+        </svg>
+        <p class="text-zinc-600 text-sm">Sin registros esta semana.</p>
+      </div>`
     : entries.map(([id, h]) => {
       const m = materiaPorId(id);
       const c = colorDe(m);
       const pct = totalSemana ? Math.round((h/totalSemana)*100) : 0;
       return `<div>
-        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${h}h</span></div>
+        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${formatearDuracion(h)}</span></div>
         <div class="w-full bg-zinc-800 rounded-full h-2"><div class="${c.dot} h-2 rounded-full" style="width:${pct}%"></div></div>
       </div>`;
     }).join('');
@@ -1234,7 +1277,7 @@ function renderMensual() {
     const dots = materiasDelDia.slice(0, 4).map(id => `<span class="w-1.5 h-1.5 rounded-full ${colorDe(materiaPorId(id)).dot}"></span>`).join('');
     const extra = materiasDelDia.length > 4 ? `<span class="text-[8px] text-zinc-400">+${materiasDelDia.length - 4}</span>` : '';
 
-    html += `<button onclick="mostrarDetalleDia('${iso}')" class="aspect-square rounded-xl ${bg} border ${esHoy ? 'border-blue-400' : 'border-zinc-800'} hover:border-zinc-500 transition-colors flex flex-col items-center justify-center text-xs ${horas>0?'text-white':'text-zinc-600'} relative p-1" title="${horas}h${examenesDia.length ? ' · ' + examenesDia.length + ' examen(es)' : ''}">
+    html += `<button onclick="mostrarDetalleDia('${iso}')" class="aspect-square rounded-xl ${bg} border ${esHoy ? 'border-blue-400' : 'border-zinc-800'} hover:border-zinc-500 transition-colors flex flex-col items-center justify-center text-xs ${horas>0?'text-white':'text-zinc-600'} relative p-1" title="${formatearDuracion(horas)}${examenesDia.length ? ' · ' + examenesDia.length + ' examen(es)' : ''}">
       ${examenesDia.length ? `<i class="fas fa-star text-amber-400 text-[9px] absolute top-1.5 right-1.5"></i>` : ''}
       <span class="${esHoy ? 'font-bold text-blue-300' : ''}">${dia}</span>
       ${dots ? `<div class="flex gap-0.5 mt-1 items-center">${dots}${extra}</div>` : ''}
@@ -1244,7 +1287,7 @@ function renderMensual() {
 
   const totalMes = entradasDelMes.reduce((s,e) => s + (e.horas||0), 0);
   const diasActivosMes = new Set(entradasDelMes.map(e => e.fecha)).size;
-  document.getElementById('mes-horas-total').textContent = `${totalMes}h`;
+  document.getElementById('mes-horas-total').textContent = formatearDuracion(totalMes);
   document.getElementById('mes-dias-activos').textContent = diasActivosMes;
   document.getElementById('mes-racha').textContent = `${calcularRacha()} días`;
 
@@ -1262,7 +1305,7 @@ function renderMensual() {
       const c = colorDe(m);
       const pct = totalMes ? Math.round((h/totalMes)*100) : 0;
       return `<div>
-        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${h}h</span></div>
+        <div class="flex justify-between text-sm mb-1"><span>${m ? escapeHtml(m.nombre) : 'Sin materia'}</span><span class="text-zinc-400">${formatearDuracion(h)}</span></div>
         <div class="w-full bg-zinc-800 rounded-full h-2"><div class="${c.dot} h-2 rounded-full" style="width:${pct}%"></div></div>
       </div>`;
     }).join('');
@@ -1300,7 +1343,7 @@ function mostrarDetalleDia(iso) {
         <span class="w-2 h-2 rounded-full ${c.dot}"></span>
         <span class="${c.text} font-medium">${m ? escapeHtml(m.nombre) : ''}</span>
         <span class="text-zinc-400 truncate">${escapeHtml(e.tema) || 'Sin descripción'}</span>
-        <span class="text-zinc-600 text-xs ml-auto shrink-0">${e.horas || 0}h</span>
+        <span class="text-zinc-600 text-xs ml-auto shrink-0">${formatearDuracion(e.horas)}</span>
       </div>`;
     });
   }
@@ -1347,6 +1390,7 @@ function actualizarDisplayPomodoro() {
   circulo.setAttribute('stroke-dashoffset', circunferencia * (1 - progreso));
   circulo.setAttribute('stroke', coloresFase[pomoFase]);
   document.title = pomoCorriendo ? `${texto} · ${nombresFase[pomoFase]}` : '✦ Agenda de Facultad';
+  actualizarPiP();
 }
 function actualizarBotonesPomodoro(corriendo) {
   document.getElementById('pomo-btn-iniciar').classList.toggle('hidden', corriendo);
@@ -1356,18 +1400,38 @@ function actualizarBotonesPomodoro(corriendo) {
 function sonarBeep(tono) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const repeticiones = tono === 'largo' ? 2 : 3;
-    for (let i = 0; i < repeticiones; i++) {
-      const delay = i * 0.3;
+    const ahora = ctx.currentTime;
+    // Melodía corta en vez de un pitido simple, para que se note bien que terminó.
+    // "trabajo": patrón ascendente y triunfal, repetido dos veces (más importante).
+    // "descanso": patrón más corto de 2 notas.
+    const patronTrabajo = [
+      { freq: 784,  t: 0.00, dur: 0.16 },
+      { freq: 988,  t: 0.16, dur: 0.16 },
+      { freq: 1175, t: 0.32, dur: 0.34 },
+      { freq: 784,  t: 0.75, dur: 0.16 },
+      { freq: 988,  t: 0.91, dur: 0.16 },
+      { freq: 1175, t: 1.07, dur: 0.38 },
+    ];
+    const patronDescanso = [
+      { freq: 660, t: 0.00, dur: 0.18 },
+      { freq: 880, t: 0.20, dur: 0.32 },
+    ];
+    const patron = tono === 'trabajo' ? patronTrabajo : patronDescanso;
+    const volumen = 0.45;
+
+    patron.forEach(nota => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.15, ctx.currentTime + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
-      osc.start(ctx.currentTime + delay);
-      osc.stop(ctx.currentTime + delay + 0.25);
-    }
+      osc.type = 'sine';
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = nota.freq;
+      gain.gain.setValueAtTime(0.0001, ahora + nota.t);
+      gain.gain.exponentialRampToValueAtTime(volumen, ahora + nota.t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ahora + nota.t + nota.dur);
+      osc.start(ahora + nota.t);
+      osc.stop(ahora + nota.t + nota.dur + 0.02);
+    });
   } catch (e) { /* audio no disponible, seguimos sin sonido */ }
 }
 async function registrarPomodoro() {
@@ -1405,7 +1469,7 @@ function pomodoroTerminarFase(natural) {
   actualizarDisplayPomodoro();
   actualizarBotonesPomodoro(false);
   if (natural) {
-    sonarBeep(faseQueTermina === 'trabajo' && pomoFase === 'largo' ? 'largo' : 'corto');
+    sonarBeep(faseQueTermina === 'trabajo' ? 'trabajo' : 'descanso');
     mostrarToast(faseQueTermina === 'trabajo' ? '🍅 ¡Pomodoro completado y registrado!' : '⏰ Descanso terminado, ¡a seguir!');
   }
 }
@@ -1417,12 +1481,109 @@ function pomodoroTick() {
     actualizarDisplayPomodoro();
   }
 }
+/* ---------- Picture-in-Picture del Pomodoro ---------- */
+let pipWindow = null;
+
+function pipSoportado() {
+  return 'documentPictureInPicture' in window;
+}
+
+async function abrirPomodoroPiP() {
+  if (!pipSoportado()) {
+    mostrarToast('⚠️ Tu navegador no soporta esto. Probá con Chrome o Edge en la computadora.', 'error');
+    return;
+  }
+  if (pipWindow) { pipWindow.focus(); return; }
+
+  pipWindow = await documentPictureInPicture.requestWindow({ width: 260, height: 320 });
+
+  const estilo = pipWindow.document.createElement('style');
+  estilo.textContent = `
+    * { box-sizing: border-box; }
+    body { margin:0; background:#09090b; color:#e4e4e7; font-family: 'Inter', system-ui, sans-serif;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; gap:10px; }
+    .pip-materia { font-size:12px; color:#a1a1aa; text-align:center; padding:0 14px; max-width: 220px;
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pip-time { font-size:42px; font-weight:700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    .pip-fase { font-size:11px; color:#71717a; text-transform:uppercase; letter-spacing:0.06em; }
+    .pip-btns { display:flex; gap:8px; margin-top:6px; }
+    button { background:#27272a; color:#e4e4e7; border:none; border-radius:12px; padding:9px 16px;
+      font-size:13px; font-weight:500; cursor:pointer; font-family: inherit; }
+    button:hover { background:#3f3f46; }
+    button.primary { background:#10b981; color:#fff; }
+    button.primary:hover { background:#059669; }
+  `;
+  pipWindow.document.head.appendChild(estilo);
+
+  const cont = pipWindow.document.createElement('div');
+  cont.innerHTML = `
+    <div class="pip-materia" id="pip-materia">—</div>
+    <div class="pip-time" id="pip-time">25:00</div>
+    <div class="pip-fase" id="pip-fase">Enfoque</div>
+    <div class="pip-btns">
+      <button id="pip-btn-toggle" class="primary"></button>
+      <button id="pip-btn-skip" title="Saltar fase"><i class="fas fa-forward"></i>⏭</button>
+    </div>
+  `;
+  pipWindow.document.body.appendChild(cont);
+
+  pipWindow.document.getElementById('pip-btn-toggle').addEventListener('click', () => {
+    if (pomoCorriendo) { pomodoroPausar(); } else { pomodoroIniciar(); }
+    actualizarPiP();
+  });
+  pipWindow.document.getElementById('pip-btn-skip').addEventListener('click', () => pomodoroSaltar());
+
+  pipWindow.addEventListener('pagehide', () => { pipWindow = null; }, { once: true });
+
+  actualizarPiP();
+}
+
+function actualizarPiP() {
+  if (!pipWindow) return;
+  const materiaSel = document.getElementById('pomo-materia');
+  const materiaNombre = (materiaSel && materiaSel.selectedOptions[0]) ? materiaSel.selectedOptions[0].textContent : '';
+  const nombresFase = { trabajo: 'Enfoque', corto: 'Descanso corto', largo: 'Descanso largo' };
+
+  const elTime = pipWindow.document.getElementById('pip-time');
+  const elFase = pipWindow.document.getElementById('pip-fase');
+  const elMateria = pipWindow.document.getElementById('pip-materia');
+  const elToggle = pipWindow.document.getElementById('pip-btn-toggle');
+
+  if (elTime) elTime.textContent = formatearMinSeg(pomoSegundosRestantes);
+  if (elFase) elFase.textContent = nombresFase[pomoFase];
+  if (elMateria) elMateria.textContent = materiaNombre;
+  if (elToggle) elToggle.textContent = pomoCorriendo ? 'Pausar' : 'Iniciar';
+}
+
+/* ---------- Wake Lock: que la pantalla no se apague durante el Pomodoro ---------- */
+let wakeLock = null;
+async function pedirWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) { /* algunos navegadores lo niegan (ej: batería baja); seguimos sin bloquear */ }
+}
+async function liberarWakeLock() {
+  try {
+    if (wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) { /* no-op */ }
+}
+// El wake lock se libera solo si cambiás de pestaña; lo recuperamos al volver si el timer sigue corriendo.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pomoCorriendo && !wakeLock) {
+    pedirWakeLock();
+  }
+});
+
 function pomodoroIniciar() {
   if (materias.length === 0 || pomoCorriendo) return;
   pomoCorriendo = true;
   pomoInterval = setInterval(pomodoroTick, 1000);
   actualizarBotonesPomodoro(true);
   actualizarDisplayPomodoro();
+  pedirWakeLock();
 }
 function pomodoroPausar() {
   clearInterval(pomoInterval);
@@ -1430,6 +1591,7 @@ function pomodoroPausar() {
   pomoCorriendo = false;
   actualizarBotonesPomodoro(false);
   document.title = '✦ Agenda de Facultad';
+  liberarWakeLock();
 }
 function pomodoroReiniciar() {
   clearInterval(pomoInterval);
@@ -1441,6 +1603,7 @@ function pomodoroReiniciar() {
   pomoSegundosRestantes = pomoTotalSegundosFase;
   actualizarDisplayPomodoro();
   actualizarBotonesPomodoro(false);
+  liberarWakeLock();
 }
 function pomodoroSaltar() {
   pomodoroTerminarFase(false);
@@ -1460,7 +1623,7 @@ function renderPomodoroHistorialHoy() {
   const sesiones = entradas.filter(e => e.fecha === hoy && e.origen === 'pomodoro');
   document.getElementById('pomo-contador-hoy').textContent = sesiones.length;
   const horasHoy = sesiones.reduce((s,e) => s + (e.horas||0), 0);
-  document.getElementById('pomo-tiempo-hoy').textContent = `${horasHoy.toFixed(1)}h`;
+  document.getElementById('pomo-tiempo-hoy').textContent = formatearDuracion(horasHoy);
   const cont = document.getElementById('pomo-historial-hoy');
   cont.innerHTML = sesiones.length === 0
     ? `<p class="text-zinc-600 text-sm">Todavía no completaste ningún pomodoro hoy.</p>`
@@ -1593,6 +1756,9 @@ async function init() {
   document.getElementById('fecha-hoy').innerHTML = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
   renderColorPicker();
   actualizarDisplayPomodoro();
+  if (pipSoportado()) {
+    document.getElementById('pomo-btn-pip').classList.remove('hidden');
+  }
 
   if (!apiConfigurada()) {
     document.getElementById('loading-overlay').innerHTML = `

@@ -133,6 +133,9 @@
         <div class="hidden md:flex items-center gap-6 shrink-0">
           <div id="fecha-hoy" class="text-zinc-400 text-sm"></div>
         </div>
+        <button onclick="cambiarPerfil()" class="md:hidden shrink-0 w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold uppercase" title="Cambiar perfil">
+          <span id="perfil-actual-mobile">?</span>
+        </button>
       </div>
     </header>
 
@@ -1623,9 +1626,22 @@ document.getElementById('form-perfil').addEventListener('submit', async e => {
   await iniciarConPerfil();
 });
 
-function cambiarPerfil() {
+async function cambiarPerfil() {
   if (!confirm('¿Cambiar de perfil en este dispositivo? Vas a tener que volver a elegir un nombre.')) return;
   localStorage.removeItem('agenda_usuario');
+  // Limpiamos también el cache del Service Worker, para descartar que quede
+  // sirviendo una copia vieja de la app en dispositivos donde el storage
+  // de la app instalada no se limpia solo desde los ajustes del sistema.
+  try {
+    if ('caches' in window) {
+      const nombres = await caches.keys();
+      await Promise.all(nombres.map(n => caches.delete(n)));
+    }
+    if ('serviceWorker' in navigator) {
+      const registros = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registros.map(r => r.unregister()));
+    }
+  } catch (e) { /* si falla, igual seguimos con el reload */ }
   location.reload();
 }
 
@@ -1633,6 +1649,8 @@ async function iniciarConPerfil() {
   const usuario = obtenerUsuario();
   const nombreEl = document.getElementById('perfil-actual');
   if (nombreEl) nombreEl.textContent = usuario;
+  const nombreElMobile = document.getElementById('perfil-actual-mobile');
+  if (nombreElMobile) nombreElMobile.textContent = usuario.slice(0, 2);
 
   try {
     const data = await cargarTodo();

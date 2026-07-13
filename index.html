@@ -1301,21 +1301,28 @@ function renderSemanal() {
     vacioEl.classList.remove('flex');
     const ctx = canvasEl.getContext('2d');
     if (chartSemanal) chartSemanal.destroy();
-    chartSemanal = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 8, maxBarThickness: 40 }]
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
-          x: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+    if (typeof Chart === 'undefined') {
+      canvasEl.classList.add('hidden');
+      vacioEl.classList.remove('hidden');
+      vacioEl.classList.add('flex');
+      vacioEl.innerHTML = `<p class="text-zinc-600 text-sm">El gráfico no pudo cargar. Recargá la página si sigue sin aparecer.</p>`;
+    } else {
+      chartSemanal = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 8, maxBarThickness: 40 }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa' } },
+            x: { grid: { display: false }, ticks: { color: '#a1a1aa' } }
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   const distCont = document.getElementById('semana-distribucion');
@@ -1461,18 +1468,28 @@ function renderDashboard() {
     vacioEl.classList.remove('flex');
     const ctx = canvasEl.getContext('2d');
     if (chartDashboard) chartDashboard.destroy();
-    chartDashboard = new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: 32 }] },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
-          x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+    if (typeof Chart === 'undefined') {
+      // La librería de gráficos todavía no terminó de cargar (por ejemplo,
+      // en una conexión lenta). No rompemos el Dashboard por esto: mostramos
+      // un aviso breve en vez del gráfico, el resto de la página sigue andando.
+      canvasEl.classList.add('hidden');
+      vacioEl.classList.remove('hidden');
+      vacioEl.classList.add('flex');
+      vacioEl.innerHTML = `<p class="text-zinc-600 text-sm">El gráfico no pudo cargar. Recargá la página si sigue sin aparecer.</p>`;
+    } else {
+      chartDashboard = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: 32 }] },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+            x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   // --- Progreso por materia (horas de la semana como barra relativa a la materia con más horas) ---
@@ -2134,14 +2151,9 @@ async function iniciarConPerfil() {
   const nombreElMobile = document.getElementById('perfil-actual-mobile');
   if (nombreElMobile) nombreElMobile.textContent = usuario.slice(0, 2);
 
+  let data;
   try {
-    const data = await cargarTodo();
-    materias = data.materias || [];
-    entradas = data.entradas || [];
-    examenes = data.examenes || [];
-    renderTodo();
-    cambiarTab(6);
-    document.getElementById('loading-overlay').style.display = 'none';
+    data = await cargarTodo();
   } catch (e) {
     document.getElementById('loading-overlay').classList.remove('hidden');
     document.getElementById('loading-overlay').innerHTML = `
@@ -2151,7 +2163,25 @@ async function iniciarConPerfil() {
         <p class="text-zinc-500 text-sm">Revisá que la URL de <code class="text-emerald-400">API_URL</code> y el <code class="text-emerald-400">API_TOKEN</code> sean correctos, y que el deploy de Apps Script tenga acceso "Anyone".</p>
         <button onclick="location.reload()" class="mt-5 bg-blue-600 hover:bg-blue-500 px-5 py-2.5 rounded-2xl text-sm font-medium transition-colors">Reintentar</button>
       </div>`;
+    return; // acá sí falló la conexión de verdad: no seguimos.
   }
+
+  materias = data.materias || [];
+  entradas = data.entradas || [];
+  examenes = data.examenes || [];
+
+  // A partir de acá los datos YA llegaron bien. Si el renderizado en sí
+  // falla por algún motivo (por ejemplo una librería externa que tardó en
+  // cargar), no queremos mostrar "no se pudo conectar" -- sería mentira,
+  // porque la conexión funcionó. Mejor: lo registramos en consola y
+  // dejamos que la app siga usable en lugar de tapar todo con un error.
+  try {
+    renderTodo();
+    cambiarTab(6);
+  } catch (e) {
+    console.error('Error al mostrar los datos (la conexión sí funcionó):', e);
+  }
+  document.getElementById('loading-overlay').style.display = 'none';
 }
 init();
 

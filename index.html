@@ -74,6 +74,9 @@
     </div>
 
     <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <button onclick="cambiarTab(6)" id="tab-6" data-tab="6" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
+        <i class="fas fa-gauge-high w-4 text-center"></i><span class="font-medium text-sm">Dashboard</span>
+      </button>
       <button onclick="cambiarTab(0)" id="tab-0" data-tab="0" class="tab-btn w-full flex items-center gap-3 px-5 py-3 rounded-2xl text-left hover:bg-zinc-800 transition-colors">
         <i class="fas fa-calendar-day w-4 text-center"></i><span class="font-medium text-sm">Diario</span>
       </button>
@@ -141,8 +144,114 @@
 
     <div class="max-w-5xl mx-auto px-4 md:px-10 py-5 md:py-8">
 
+      <!-- PANEL DASHBOARD -->
+      <div id="panel-6">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <h2 id="dash-saludo" class="text-2xl font-bold tracking-tight">Hola 👋</h2>
+            <p id="dash-fecha" class="text-zinc-500 text-sm mt-0.5"></p>
+          </div>
+          <div class="flex items-center gap-2 bg-zinc-900 border border-zinc-700 rounded-2xl px-4 py-2.5">
+            <span class="text-lg">🔥</span>
+            <div class="text-sm"><span id="dash-racha" class="font-bold">0</span> <span class="text-zinc-500">días seguidos</span></div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="glass border border-zinc-700 rounded-3xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-zinc-500 uppercase tracking-wide">Esta semana</span>
+              <i class="fas fa-clock text-blue-400 text-sm"></i>
+            </div>
+            <p id="dash-horas-semana" class="text-2xl font-bold">0h</p>
+            <p id="dash-horas-semana-delta" class="text-xs mt-1 text-zinc-500">—</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-zinc-500 uppercase tracking-wide">Pomodoros hoy</span>
+              <i class="fas fa-stopwatch text-emerald-400 text-sm"></i>
+            </div>
+            <p id="dash-pomos-hoy" class="text-2xl font-bold">0</p>
+            <p id="dash-pomos-hoy-sub" class="text-xs mt-1 text-zinc-500">—</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-zinc-500 uppercase tracking-wide">Materias activas</span>
+              <i class="fas fa-book text-amber-400 text-sm"></i>
+            </div>
+            <p id="dash-materias-activas" class="text-2xl font-bold">0</p>
+            <p id="dash-materias-activas-sub" class="text-xs mt-1 text-zinc-500">—</p>
+          </div>
+          <div class="glass border border-zinc-700 rounded-3xl p-5 card-hover">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-zinc-500 uppercase tracking-wide">Promedio general</span>
+              <i class="fas fa-star text-purple-400 text-sm"></i>
+            </div>
+            <p id="dash-promedio" class="text-2xl font-bold">—</p>
+            <p id="dash-promedio-sub" class="text-xs mt-1 text-zinc-500">—</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+          <!-- Próximo examen destacado -->
+          <div class="lg:col-span-1">
+            <div id="dash-proximo-examen" class="glass border border-zinc-700 rounded-3xl p-6 h-full flex flex-col justify-between"></div>
+          </div>
+          <!-- Mini gráfico semanal -->
+          <div class="lg:col-span-2 glass border border-zinc-700 rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-zinc-300">Actividad de los últimos 7 días</h3>
+              <button onclick="cambiarTab(3)" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Ver más <i class="fas fa-arrow-right ml-1"></i></button>
+            </div>
+            <canvas id="dash-chart-semanal" height="70"></canvas>
+            <div id="dash-chart-vacio" class="hidden flex-col items-center justify-center text-center py-4"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+          <!-- Progreso por materia -->
+          <div class="lg:col-span-1 glass border border-zinc-700 rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-zinc-300">Progreso por materia</h3>
+              <button onclick="cambiarTab(1)" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Ver todas <i class="fas fa-arrow-right ml-1"></i></button>
+            </div>
+            <div id="dash-progreso-materias" class="space-y-4"></div>
+          </div>
+
+          <!-- Actividad reciente -->
+          <div class="lg:col-span-2 glass border border-zinc-700 rounded-3xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold text-zinc-300">Actividad reciente</h3>
+              <button onclick="cambiarTab(0)" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Ver diario <i class="fas fa-arrow-right ml-1"></i></button>
+            </div>
+            <div id="dash-actividad-reciente" class="space-y-1"></div>
+          </div>
+        </div>
+
+        <!-- Accesos rápidos -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button onclick="cambiarTab(5)" class="glass border border-zinc-700 rounded-2xl p-4 text-left hover:border-emerald-500/40 card-hover transition-colors">
+            <i class="fas fa-stopwatch text-emerald-400 mb-2"></i>
+            <p class="text-sm font-medium">Arrancar Pomodoro</p>
+          </button>
+          <button onclick="cambiarTab(0)" class="glass border border-zinc-700 rounded-2xl p-4 text-left hover:border-blue-500/40 card-hover transition-colors">
+            <i class="fas fa-pen text-blue-400 mb-2"></i>
+            <p class="text-sm font-medium">Cargar entrada</p>
+          </button>
+          <button onclick="cambiarTab(2)" class="glass border border-zinc-700 rounded-2xl p-4 text-left hover:border-amber-500/40 card-hover transition-colors">
+            <i class="fas fa-graduation-cap text-amber-400 mb-2"></i>
+            <p class="text-sm font-medium">Agregar examen</p>
+          </button>
+          <button onclick="cambiarTab(4)" class="glass border border-zinc-700 rounded-2xl p-4 text-left hover:border-purple-500/40 card-hover transition-colors">
+            <i class="fas fa-calendar text-purple-400 mb-2"></i>
+            <p class="text-sm font-medium">Ver calendario</p>
+          </button>
+        </div>
+      </div>
+
       <!-- PANEL DIARIO -->
-      <div id="panel-0">
+      <div id="panel-0" class="hidden">
         <div id="sin-materias-diario" class="hidden glass border border-amber-700/40 rounded-3xl p-8 mb-8 text-center">
           <p class="text-4xl mb-3">📖</p>
           <p class="text-zinc-300 mb-4">Todavía no cargaste ninguna materia. Creá al menos una antes de registrar entradas.</p>
@@ -485,6 +594,9 @@
 
 <!-- Navegación inferior (solo mobile) -->
 <nav class="nav-mobile md:hidden fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 flex z-30">
+  <button onclick="cambiarTab(6)" data-tab="6" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
+    <i class="fas fa-gauge-high text-base"></i><span class="text-[10px] font-medium">Dashboard</span>
+  </button>
   <button onclick="cambiarTab(0)" data-tab="0" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
     <i class="fas fa-calendar-day text-base"></i><span class="text-[10px] font-medium">Diario</span>
   </button>
@@ -497,12 +609,6 @@
   <button onclick="cambiarTab(2)" data-tab="2" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors relative">
     <i class="fas fa-graduation-cap text-base"></i><span class="text-[10px] font-medium">Exámenes</span>
     <span id="badge-examenes-mobile" class="hidden absolute top-1 right-1/4 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full items-center justify-center"></span>
-  </button>
-  <button onclick="cambiarTab(3)" data-tab="3" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
-    <i class="fas fa-calendar-week text-base"></i><span class="text-[10px] font-medium">Semanal</span>
-  </button>
-  <button onclick="cambiarTab(4)" data-tab="4" class="tab-btn-mobile flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-zinc-500 transition-colors">
-    <i class="fas fa-chart-bar text-base"></i><span class="text-[10px] font-medium">Mensual</span>
   </button>
 </nav>
 
@@ -550,6 +656,7 @@ let materiaEditando = null;
 let examenEditando = null;
 let mesActual = new Date();
 let chartSemanal = null;
+let chartDashboard = null;
 
 /* ---------- Estado del Pomodoro ---------- */
 let pomoDurTrabajo = 25;
@@ -1232,6 +1339,188 @@ function renderSemanal() {
     }).join('');
 }
 
+/* ---------- Dashboard ---------- */
+function renderDashboard() {
+  const usuario = obtenerUsuario() || '';
+  const nombreCapitalizado = usuario ? usuario.charAt(0).toUpperCase() + usuario.slice(1) : '';
+  const hora = new Date().getHours();
+  const saludo = hora < 12 ? 'Buen día' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
+  document.getElementById('dash-saludo').textContent = `${saludo}${nombreCapitalizado ? ', ' + nombreCapitalizado : ''} 👋`;
+  document.getElementById('dash-fecha').textContent = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('dash-racha').textContent = calcularRacha();
+
+  // --- Últimos 7 días y los 7 anteriores (para comparar deltas) ---
+  const dias7 = [];
+  const dias7Previos = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dias7.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  for (let i = 13; i >= 7; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dias7Previos.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  const horasPorDia = dias7.map(iso => entradas.filter(e => e.fecha === iso).reduce((s,e) => s + (e.horas||0), 0));
+  const totalSemana = horasPorDia.reduce((a,b) => a+b, 0);
+  const totalSemanaPrevia = dias7Previos.reduce((acc, iso) => acc + entradas.filter(e => e.fecha === iso).reduce((s,e) => s + (e.horas||0), 0), 0);
+
+  document.getElementById('dash-horas-semana').textContent = formatearDuracion(totalSemana);
+  const deltaEl = document.getElementById('dash-horas-semana-delta');
+  if (totalSemanaPrevia === 0 && totalSemana === 0) {
+    deltaEl.textContent = 'Sin actividad todavía';
+    deltaEl.className = 'text-xs mt-1 text-zinc-500';
+  } else if (totalSemanaPrevia === 0) {
+    deltaEl.textContent = '¡Arrancaste esta semana!';
+    deltaEl.className = 'text-xs mt-1 text-emerald-400';
+  } else {
+    const deltaPct = Math.round(((totalSemana - totalSemanaPrevia) / totalSemanaPrevia) * 100);
+    const sube = deltaPct >= 0;
+    deltaEl.innerHTML = `<i class="fas fa-arrow-${sube ? 'up' : 'down'} mr-1"></i>${Math.abs(deltaPct)}% vs. semana pasada`;
+    deltaEl.className = `text-xs mt-1 ${sube ? 'text-emerald-400' : 'text-red-400'}`;
+  }
+
+  // --- Pomodoros de hoy ---
+  const hoy = hoyISO();
+  const pomosHoy = entradas.filter(e => e.fecha === hoy && e.origen === 'pomodoro');
+  document.getElementById('dash-pomos-hoy').textContent = pomosHoy.length;
+  const minutosHoy = Math.round(pomosHoy.reduce((s,e) => s + (e.horas||0), 0) * 60);
+  document.getElementById('dash-pomos-hoy-sub').textContent = pomosHoy.length > 0 ? `${minutosHoy} min enfocado` : 'Todavía ninguno hoy';
+
+  // --- Materias activas ---
+  const activas = materias.filter(m => !['aprobada'].includes(m.estado || 'cursando'));
+  document.getElementById('dash-materias-activas').textContent = activas.length;
+  document.getElementById('dash-materias-activas-sub').textContent = `${materias.length} en total`;
+
+  // --- Promedio general ---
+  const conNotaFinal = materias.filter(m => m.notaFinal !== null && m.notaFinal !== undefined && m.notaFinal !== '');
+  const promedioGeneral = conNotaFinal.length ? (conNotaFinal.reduce((s,m) => s + parseFloat(m.notaFinal), 0) / conNotaFinal.length) : null;
+  document.getElementById('dash-promedio').textContent = promedioGeneral !== null ? promedioGeneral.toFixed(2) : '—';
+  document.getElementById('dash-promedio-sub').textContent = conNotaFinal.length ? `sobre ${conNotaFinal.length} materia${conNotaFinal.length>1?'s':''}` : 'Sin notas finales aún';
+
+  // --- Próximo examen destacado ---
+  const proxCont = document.getElementById('dash-proximo-examen');
+  const proximos = examenes.filter(e => !e.rendido).sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  if (proximos.length === 0) {
+    proxCont.innerHTML = `
+      <div>
+        <p class="text-xs text-zinc-500 uppercase tracking-wide mb-3">Próximo examen</p>
+        <p class="text-4xl mb-2">🎉</p>
+        <p class="text-sm text-zinc-400">No tenés exámenes pendientes.</p>
+      </div>
+      <button onclick="cambiarTab(2)" class="mt-4 text-sm text-blue-400 hover:text-blue-300 transition-colors text-left">+ Agregar examen <i class="fas fa-arrow-right ml-1"></i></button>
+    `;
+  } else {
+    const ex = proximos[0];
+    const m = materiaPorId(ex.materiaId);
+    const c = colorDe(m);
+    const dias = diasEntre(ex.fecha);
+    let urgencia = 'text-emerald-400', urgenciaBg = 'bg-emerald-500/10', texto = `En ${dias} días`;
+    if (dias < 0) { urgencia = 'text-red-400'; urgenciaBg = 'bg-red-500/10'; texto = `Atrasado ${Math.abs(dias)}d`; }
+    else if (dias === 0) { urgencia = 'text-red-400'; urgenciaBg = 'bg-red-500/10'; texto = 'Es hoy'; }
+    else if (dias === 1) { urgencia = 'text-orange-400'; urgenciaBg = 'bg-orange-500/10'; texto = 'Mañana'; }
+    else if (dias <= 3) { urgencia = 'text-amber-400'; urgenciaBg = 'bg-amber-500/10'; texto = `En ${dias} días`; }
+    else if (dias <= 7) { urgencia = 'text-blue-400'; urgenciaBg = 'bg-blue-500/10'; texto = `En ${dias} días`; }
+    proxCont.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs text-zinc-500 uppercase tracking-wide">Próximo examen</p>
+          <span class="${urgenciaBg} ${urgencia} px-2.5 py-1 rounded-full text-xs font-bold">${texto}</span>
+        </div>
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="w-2.5 h-2.5 rounded-full ${c.dot}"></span>
+          <span class="${c.text} font-semibold text-sm">${m ? escapeHtml(m.nombre) : ''}</span>
+        </div>
+        <p class="font-semibold text-lg leading-snug mb-1">${escapeHtml(ex.tema) || 'Examen'}</p>
+        <p class="text-zinc-500 text-xs">${fmtFechaCorta(ex.fecha)}</p>
+      </div>
+      <button onclick="cambiarTab(2)" class="mt-4 text-sm text-zinc-400 hover:text-zinc-200 transition-colors text-left">Ver todos los exámenes <i class="fas fa-arrow-right ml-1"></i></button>
+    `;
+  }
+
+  // --- Mini gráfico semanal ---
+  const labels = dias7.map(iso => new Date(iso+'T00:00:00').toLocaleDateString('es-AR', { weekday:'short' }));
+  const canvasEl = document.getElementById('dash-chart-semanal');
+  const vacioEl = document.getElementById('dash-chart-vacio');
+  if (totalSemana === 0) {
+    if (chartDashboard) { chartDashboard.destroy(); chartDashboard = null; }
+    canvasEl.classList.add('hidden');
+    vacioEl.classList.remove('hidden');
+    vacioEl.classList.add('flex');
+    vacioEl.innerHTML = `
+      <svg width="100" height="70" viewBox="0 0 120 90" fill="none" class="mb-3 opacity-70">
+        <rect x="10" y="55" width="16" height="25" rx="4" fill="#27272a"/>
+        <rect x="36" y="40" width="16" height="40" rx="4" fill="#3f3f46"/>
+        <rect x="62" y="20" width="16" height="60" rx="4" fill="#10b981" fill-opacity="0.35"/>
+        <rect x="88" y="35" width="16" height="45" rx="4" fill="#3f3f46"/>
+      </svg>
+      <p class="text-zinc-500 text-sm">Sin actividad registrada en los últimos 7 días</p>
+    `;
+  } else {
+    canvasEl.classList.remove('hidden');
+    vacioEl.classList.add('hidden');
+    vacioEl.classList.remove('flex');
+    const ctx = canvasEl.getContext('2d');
+    if (chartDashboard) chartDashboard.destroy();
+    chartDashboard = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ data: horasPorDia, backgroundColor: '#10b981', borderRadius: 6, maxBarThickness: 32 }] },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: '#27272a' }, ticks: { color: '#a1a1aa', font: { size: 10 } } },
+          x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  // --- Progreso por materia (horas de la semana como barra relativa a la materia con más horas) ---
+  const progCont = document.getElementById('dash-progreso-materias');
+  if (materias.length === 0) {
+    progCont.innerHTML = `<p class="text-zinc-600 text-sm">Todavía no cargaste materias.</p>`;
+  } else {
+    const horasPorMateriaSemana = {};
+    entradas.filter(e => dias7.includes(e.fecha)).forEach(e => {
+      horasPorMateriaSemana[e.materiaId] = (horasPorMateriaSemana[e.materiaId] || 0) + (e.horas || 0);
+    });
+    const maxHoras = Math.max(1, ...Object.values(horasPorMateriaSemana));
+    const materiasOrdenadas = [...materias].sort((a,b) => (horasPorMateriaSemana[b.id]||0) - (horasPorMateriaSemana[a.id]||0)).slice(0, 5);
+    progCont.innerHTML = materiasOrdenadas.map(m => {
+      const c = colorDe(m);
+      const h = horasPorMateriaSemana[m.id] || 0;
+      const pct = Math.round((h / maxHoras) * 100);
+      return `<div>
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="truncate font-medium">${escapeHtml(m.nombre)}</span>
+          <span class="text-zinc-500 shrink-0 ml-2">${h > 0 ? formatearDuracion(h) : '—'}</span>
+        </div>
+        <div class="w-full bg-zinc-800 rounded-full h-1.5"><div class="${c.dot} h-1.5 rounded-full transition-all" style="width:${h > 0 ? pct : 0}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  // --- Actividad reciente (últimas 5 entradas, cualquier fecha) ---
+  const actCont = document.getElementById('dash-actividad-reciente');
+  const recientes = [...entradas].sort((a,b) => new Date(b.fecha) - new Date(a.fecha) || 0).slice(0, 5);
+  if (recientes.length === 0) {
+    actCont.innerHTML = `<p class="text-zinc-600 text-sm py-2">Todavía no registraste actividad. ¡Arrancá con un Pomodoro o una entrada!</p>`;
+  } else {
+    actCont.innerHTML = recientes.map(e => {
+      const m = materiaPorId(e.materiaId);
+      const c = colorDe(m);
+      return `<div class="flex items-center gap-3 py-2 border-b border-zinc-800 last:border-0">
+        <span class="w-2 h-2 rounded-full ${c.dot} shrink-0"></span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm truncate"><span class="${c.text} font-medium">${m ? escapeHtml(m.nombre) : ''}</span> · ${escapeHtml(e.tema) || 'Sin descripción'}</p>
+        </div>
+        <span class="text-xs text-zinc-500 shrink-0">${fmtFechaCorta(e.fecha)}</span>
+        <span class="text-xs text-zinc-600 shrink-0 w-14 text-right">${formatearDuracion(e.horas)}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
 /* ---------- Mensual ---------- */
 function cambiarMes(delta) {
   mesActual.setMonth(mesActual.getMonth() + delta);
@@ -1756,11 +2045,12 @@ function cambiarTab(n) {
   document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('tab-active'));
   document.querySelectorAll('.tab-btn-mobile').forEach(t => t.classList.remove('activo'));
   document.querySelectorAll(`[data-tab="${n}"]`).forEach(t => t.classList.add(t.classList.contains('tab-btn-mobile') ? 'activo' : 'tab-active'));
-  const titulos = { 0:'Diario de hoy', 1:'Mis materias', 2:'Exámenes y entregas', 3:'Resumen semanal', 4:'Vista mensual', 5:'Pomodoro' };
+  const titulos = { 0:'Diario de hoy', 1:'Mis materias', 2:'Exámenes y entregas', 3:'Resumen semanal', 4:'Vista mensual', 5:'Pomodoro', 6:'Dashboard' };
   document.getElementById('header-title').textContent = titulos[n];
   if (n === 3) renderSemanal();
   if (n === 4) renderMensual();
   if (n === 5) renderPomodoroHistorialHoy();
+  if (n === 6) renderDashboard();
 }
 
 /* ---------- Render general ---------- */
@@ -1769,10 +2059,11 @@ function renderTodo() {
   renderDiario();
   renderExamenes();
   renderStatsGlobales();
-  const panelActivo = [0,1,2,3,4,5].find(n => !document.getElementById(`panel-${n}`).classList.contains('hidden'));
+  const panelActivo = [0,1,2,3,4,5,6].find(n => !document.getElementById(`panel-${n}`).classList.contains('hidden'));
   if (panelActivo === 3) renderSemanal();
   if (panelActivo === 4) renderMensual();
   if (panelActivo === 5) renderPomodoroHistorialHoy();
+  if (panelActivo === 6) renderDashboard();
 }
 
 /* ---------- Init ---------- */
@@ -1849,7 +2140,7 @@ async function iniciarConPerfil() {
     entradas = data.entradas || [];
     examenes = data.examenes || [];
     renderTodo();
-    cambiarTab(0);
+    cambiarTab(6);
     document.getElementById('loading-overlay').style.display = 'none';
   } catch (e) {
     document.getElementById('loading-overlay').classList.remove('hidden');

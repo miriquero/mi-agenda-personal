@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-facultad-v2';
+const CACHE_NAME = 'agenda-facultad-v3';
 const ARCHIVOS_CACHE = [
   './',
   './index.html',

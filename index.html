@@ -558,6 +558,7 @@ let pomoDurLargo = 15;
 let pomoFase = 'trabajo'; // 'trabajo' | 'corto' | 'largo'
 let pomoTotalSegundosFase = pomoDurTrabajo * 60;
 let pomoSegundosRestantes = pomoTotalSegundosFase;
+let pomoInicioFaseTs = null; // Date.now() de cuando arrancó (o se reanudó) la fase actual
 let pomoInterval = null;
 let pomoCorriendo = false;
 let pomoCiclos = 0;
@@ -1466,6 +1467,7 @@ function pomodoroTerminarFase(natural) {
     : 'trabajo';
   pomoTotalSegundosFase = duracionFaseActual() * 60;
   pomoSegundosRestantes = pomoTotalSegundosFase;
+  pomoInicioFaseTs = null; // se vuelve a fijar cuando el usuario apriete Iniciar
   actualizarDisplayPomodoro();
   actualizarBotonesPomodoro(false);
   if (natural) {
@@ -1474,13 +1476,28 @@ function pomodoroTerminarFase(natural) {
   }
 }
 function pomodoroTick() {
-  pomoSegundosRestantes--;
+  // No restamos de a 1 segundo por tick: calculamos cuánto tiempo real
+  // pasó desde que arrancó la fase, comparando contra el reloj del
+  // sistema (Date.now()). Así, si el navegador frena o retrasa los
+  // ticks por estar la pestaña en segundo plano, apenas vuelve a
+  // ejecutar el timer se corrige solo en vez de quedar atrasado.
+  const transcurrido = Math.floor((Date.now() - pomoInicioFaseTs) / 1000);
+  pomoSegundosRestantes = pomoTotalSegundosFase - transcurrido;
   if (pomoSegundosRestantes <= 0) {
+    pomoSegundosRestantes = 0;
+    actualizarDisplayPomodoro();
     pomodoroTerminarFase(true);
   } else {
     actualizarDisplayPomodoro();
   }
 }
+// Al volver a la pestaña (o cuando el navegador reactiva los timers),
+// recalculamos enseguida para que no se vea "pegado" ni un instante.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && pomoCorriendo) {
+    pomodoroTick();
+  }
+});
 /* ---------- Picture-in-Picture del Pomodoro ---------- */
 let pipWindow = null;
 
@@ -1580,6 +1597,12 @@ document.addEventListener('visibilitychange', () => {
 function pomodoroIniciar() {
   if (materias.length === 0 || pomoCorriendo) return;
   pomoCorriendo = true;
+  // pomoInicioFaseTs marca "desde cuándo" contamos los segundos que ya
+  // pasaron de esta fase. Si venimos de una pausa, pomoSegundosRestantes
+  // ya tiene el tiempo que quedaba, así que arrancamos el cronómetro
+  // desde ahí (no desde el total de la fase).
+  const yaTranscurrido = pomoTotalSegundosFase - pomoSegundosRestantes;
+  pomoInicioFaseTs = Date.now() - yaTranscurrido * 1000;
   pomoInterval = setInterval(pomodoroTick, 1000);
   actualizarBotonesPomodoro(true);
   actualizarDisplayPomodoro();
@@ -1589,6 +1612,7 @@ function pomodoroPausar() {
   clearInterval(pomoInterval);
   pomoInterval = null;
   pomoCorriendo = false;
+  pomoInicioFaseTs = null;
   actualizarBotonesPomodoro(false);
   document.title = '✦ Agenda de Facultad';
   liberarWakeLock();
@@ -1597,6 +1621,7 @@ function pomodoroReiniciar() {
   clearInterval(pomoInterval);
   pomoInterval = null;
   pomoCorriendo = false;
+  pomoInicioFaseTs = null;
   pomoFase = 'trabajo';
   pomoCiclos = 0;
   pomoTotalSegundosFase = pomoDurTrabajo * 60;

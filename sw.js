@@ -1,8 +1,9 @@
-const CACHE_NAME = 'agenda-facultad-v3';
+const CACHE_NAME = 'agenda-facultad-v4';
 const ARCHIVOS_CACHE = [
   './',
   './index.html',
   './manifest.json',
+  './chart.umd.min.js',
   './icon-192.png',
   './icon-512.png',
 ];
